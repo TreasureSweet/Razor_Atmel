@@ -14,10 +14,7 @@ All Global variable names shall start with "G_"
 /* New variables */
 volatile u32 G_u32SystemFlags = 0;                     /* Global system flags */
 volatile u32 G_u32ApplicationFlags = 0;                /* Global applications flags: set when application is successfully initialized */
-u32 u32UselessVariable;
-u8 u8DataCheckBit;
-static u16 u16NumBit;
- 
+u32 u32Counter;
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* External global variables defined in other files (must indicate which file they are defined in) */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
@@ -42,28 +39,10 @@ contraints but must complete execution regardless of success or failure of start
 the 1ms period.
 ***********************************************************************************************************************/
 
-/***********************************************************************************************************************
-* Set Or Clear Bit
-***********************************************************************************************************************/
-void Set_bits(void)
-{
-  u16NumBit|=_BIT11;
-}
-
-void Clear_bits(void)
-{
-  u16NumBit&=~_BIT11;
-}
-
-
 void main(void)
 {
   G_u32SystemFlags |= _SYSTEM_INITIALIZING;
-  u32UselessVariable=0;
-  u8DataCheckBit=0xA5;
-  u16NumBit=0xAD28;//*1010 1101 0010 1000
-  Weather aeTodayArray[]={RAIN,SUNNY};
-  Weather aeTomorrowArray[]={OVERCAST,THUNDER,GREASY};
+  u32Counter = 0;
   /* Low level initialization */
   WatchDogSetup(); /* During development, does not reset processor if timeout */
   GpioSetup();
@@ -104,11 +83,8 @@ void main(void)
   /* Super loop */  
   while(1)
   {
-    Clear_bits();
-    Set_bits();
     WATCHDOG_BONE();
-    u32UselessVariable++;
-    u8DataCheckBit=u8DataCheckBit<<4;
+    
     /* Drivers */
     LedUpdate();
     ButtonRunActiveState();
@@ -125,15 +101,16 @@ void main(void)
     SdCardRunActiveState();
 
     /* Applications */
-    UserApp1RunActiveState();
-    UserApp2RunActiveState();
-    UserApp3RunActiveState();
-    
+    //UserApp1RunActiveState();
+    //UserApp2RunActiveState();
+    UserApp3RunActiveState();    
     /* System sleep*/
-    HEARTBEAT_OFF();
+    //HEARTBEAT_OFF();
     SystemSleep();
-    HEARTBEAT_ON();
+    //HEARTBEAT_ON();
     
+    /*u32Counter + 1 every circulation*/
+    u32Counter++;
   } /* end while(1) main super loop */
   
 } /* end main() */

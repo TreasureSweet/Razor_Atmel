@@ -18,6 +18,11 @@ Type Definitions
 Constants / Definitions
 **********************************************************************************************************************/
 
+/*--------------------------------------------------------------------------------------------------------------------
+This is the time from the firt light on to the next time on.
+And one period will contain 10 twinkle.                        
+---------------------------------------------------------------------------------------------------------------------*/
+#define COUNTER_LIMIT_MS_3 (u32)10
 
 /**********************************************************************************************************************
 Function Declarations
@@ -44,7 +49,6 @@ void UserApp3RunActiveState(void);
 State Machine Declarations
 ***********************************************************************************************************************/
 static void UserApp3SM_Idle(void);    
-
 static void UserApp3SM_Error(void);         
 static void UserApp3SM_FailedInit(void);        
 

@@ -122,7 +122,59 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp3SM_Idle(void)
 {
-    
+  static u32 u32Counter = 0;
+  static u32 u32Counter_1 = 0;
+  static u32 u32Time = 0;
+  static bool bInversion = FALSE;
+  static bool bLightIsOn = FALSE;
+ 
+  /* Increment u32Counter every 1ms cycle */
+  u32Counter++;
+  u32Counter_1++;
+  
+  /* Check and roll over */
+ if(u32Counter == u32Time)
+ {
+   if(bLightIsOn)
+   {
+     HEARTBEAT_OFF();
+   }
+   else
+   {
+     HEARTBEAT_ON();
+   }
+   bLightIsOn = !bLightIsOn;
+ }
+ 
+ if(u32Counter == COUNTER_LIMIT_MS_3)
+ {
+   if(!bInversion)                        //Direct cycle
+   {
+     u32Time += COUNTER_LIMIT_MS_3/10;     
+     if(!bLightIsOn)
+     {
+       HEARTBEAT_ON();
+       bLightIsOn = !bLightIsOn;
+     }
+   }
+   else                                  //Negative cycle
+   {
+     u32Time -= COUNTER_LIMIT_MS_3/10;      
+     if(!bLightIsOn && u32Time != 0)      
+     {
+       HEARTBEAT_ON();
+       bLightIsOn = !bLightIsOn;
+     }
+   }
+   u32Counter = 0;
+ }
+ 
+ /*Check */
+ if(u32Counter_1 == 10*COUNTER_LIMIT_MS_3)
+  {
+    bInversion = !bInversion;
+    u32Counter_1 = 0;
+  }      
 } /* end UserApp3SM_Idle() */
      
 #if 0
@@ -130,7 +182,7 @@ static void UserApp3SM_Idle(void)
 /* Handle an error */
 static void UserApp3SM_Error(void)          
 {
-  
+
 } /* end UserApp3SM_Error() */
 #endif
 
