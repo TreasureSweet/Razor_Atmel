@@ -87,7 +87,11 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-   HEARTBEAT_OFF();
+  LedOff(WHITE);
+  LedOn(RED);
+  LedOff(GREEN);
+  LedOff(PURPLE);
+    
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -136,38 +140,124 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-  static u32 u32Counter = 0;
-  static u32 u32Counter_1 = 0;
-  static u32 u32Time = SET_TIME_1;
-  static bool bLightIsOn = FALSE;
- 
-  /* Increment u32Counter every 1ms cycle */
-  u32Counter++;
-  u32Counter_1++;
+  static u32 u32Password=1111111111;
+  static u32 u32PasswordJudge=0;
+  static u32 u32ChooseTime=0;
+  static bool bPasswordChange=FALSE;
+  static bool bLightOn=FALSE;
+  static u8 u8PreeBlink=0;
+  static u16 u16ChangeBlink=0;
   
-  /* Check and roll over */
-  if(u32Counter <= COUNTER_LIMIT_MS_1)
+  u8 u8ButtonNum=5;
+  
+  /*Give every button a num*/
+  if(WasButtonPressed(BUTTON0))
   {
-    if(u32Counter_1 == u32Time)
+    u8ButtonNum=1;
+    LedOn(WHITE);
+    bLightOn=TRUE;
+    ButtonAcknowledge(BUTTON0);
+  }
+  
+  if(WasButtonPressed(BUTTON1))
+  {
+    u8ButtonNum=2;
+    LedOn(WHITE);
+    bLightOn=TRUE;
+    ButtonAcknowledge(BUTTON1);
+  }
+  
+  if(WasButtonPressed(BUTTON2))
+  {
+    u8ButtonNum=3;
+    LedOn(WHITE);
+    bLightOn=TRUE;
+    ButtonAcknowledge(BUTTON2);
+  }
+
+  if(WasButtonPressed(BUTTON3))
+  {
+    u8ButtonNum=4;
+    LedOn(WHITE);
+    bLightOn=TRUE;
+    ButtonAcknowledge(BUTTON3);
+  }  
+  
+  /*If you want to change password,you must hold BUTTON3 the first 2 scends*/
+  if(u32ChooseTime<2000)
+  {
+    u32ChooseTime++;
+  
+    /*Password change when hold BUTTON3 1.5s*/
+    if(IsButtonHeld(BUTTON3,1500))
     {
-      u32Counter_1 = 0;
-      if(bLightIsOn)
-      {
-        HEARTBEAT_OFF();
-      }
-      else
-      {
-        HEARTBEAT_ON();
-      }
-      bLightIsOn = !bLightIsOn;
+      bPasswordChange=TRUE;
+      u32Password=0;
     }
+  
+    if(bPasswordChange)
+    {
+      /*Blink the red an green light ever 1s*/
+      u16ChangeBlink++;
+      u32ChooseTime=0;
+      
+      if(u16ChangeBlink==500)
+      {
+        LedToggle(RED);
+        LedToggle(GREEN);
+        u16ChangeBlink=0;
+      }
+    
+      /*Import password with button0~2,and use button3 to save*/
+      if(u8ButtonNum<4)
+      {
+        u32Password=10*u32Password+u8ButtonNum;
+      }
+      
+      /*Identify and pop-up mode*/
+      if(u8ButtonNum==4)
+      {
+        u32ChooseTime=2000;
+        LedOn(RED);
+        LedOff(GREEN);
+        u16ChangeBlink=0;      
+      }
+    }   
   }
   else
-  {  
-    u32Counter = 0;
-    u32Counter_1 = 0;
-    u32Time=u32Time >> 1;
-  }  
+  {
+    /*Inport password and distinguish true or false*/
+    if(u8ButtonNum<4)
+    {
+      u32PasswordJudge=10*u32PasswordJudge+u8ButtonNum;
+    }
+  
+    /*Distinguish when BUTTON4 is pressed*/
+    if(u8ButtonNum==4)
+    {
+      if(u32PasswordJudge==u32Password)//Grenn blink when true and turn off red
+      {
+        LedOff(RED);
+        LedBlink(GREEN,LED_4HZ);
+      }
+      else//Red blink when false
+      {
+        LedBlink(RED,LED_4HZ);
+      }
+    }
+  }
+  
+  /*Push button light*/
+  if(bLightOn)
+  {
+    if(u8PreeBlink++==200)
+    {
+      u8PreeBlink=0;
+      LedOff(WHITE);
+      bLightOn=FALSE;
+    }
+  }
+  
 } /* end UserApp1SM_Idle() */
     
 

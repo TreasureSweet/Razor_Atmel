@@ -74,6 +74,14 @@ Promises:
 */
 void UserApp2Initialize(void)
 {
+  LedOff(WHITE);
+  LedOff(PURPLE);
+  LedOff(BLUE);
+  LedOff(CYAN);
+  LedOff(GREEN);
+  LedOff(YELLOW);
+  LedOff(ORANGE);
+  LedOff(RED);
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -122,54 +130,130 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp2SM_Idle(void)
 {
-  static u32 u32Counter = 0;
-  static u32 u32Counter_1 = 0;
-  static u32 u32Time = SET_TIME_2;
-  static bool bInversion = FALSE;
-  static bool bLightIsOn = FALSE;
- 
-  /* Increment u32Counter every 1ms cycle */
-  u32Counter++;
-  u32Counter_1++;
+  static u16 u16Counter=0;
+  static u16 u16Counter_1=0;
+  static u8 u8Choose=0;
+  static LedRateType aeLedHz[]={LED_PWM_0, LED_PWM_5, LED_PWM_10, LED_PWM_15, LED_PWM_20, 
+                                LED_PWM_25, LED_PWM_30, LED_PWM_35, LED_PWM_40, LED_PWM_45, 
+                                LED_PWM_50, LED_PWM_55 , LED_PWM_60, LED_PWM_65, LED_PWM_70, 
+                                LED_PWM_75, LED_PWM_80, LED_PWM_85, LED_PWM_90, LED_PWM_95, 
+                                LED_PWM_100,LED_PWM_100,LED_PWM_95,LED_PWM_90,LED_PWM_85,
+                                LED_PWM_80,LED_PWM_75,LED_PWM_70,LED_PWM_65, LED_PWM_60,
+                                LED_PWM_55,LED_PWM_50,LED_PWM_45,LED_PWM_40, LED_PWM_35,
+                                LED_PWM_30,LED_PWM_25,LED_PWM_20,LED_PWM_15,LED_PWM_10,
+                                LED_PWM_5,LED_PWM_0};
+  static LedRateType* peLed1=aeLedHz;
+  static LedRateType* peLed2=aeLedHz;
+  static LedRateType* peLed3=aeLedHz;
+  static LedRateType* peLed4=aeLedHz;
+  static LedRateType* peLed5=aeLedHz;
+  static LedRateType* peLed6=aeLedHz;
+  static LedRateType* peLed7=aeLedHz;
+  static LedRateType* peLed8=aeLedHz;
   
-  /* Check and roll over */  
-  if(u32Counter <= COUNTER_LIMIT_MS_2)
+  u16Counter++;
+  u16Counter_1++;
+/*1   ************************************/  
+  if(peLed1-&aeLedHz[0]==40)
   {
-    if(u32Counter_1 == u32Time)
-    {
-      u32Counter_1 = 0;
-      if(bLightIsOn)
-      {
-        HEARTBEAT_OFF();
-      }
-      else
-      {
-        HEARTBEAT_ON();
-      }
-      bLightIsOn =! bLightIsOn;
-    }
+    peLed1=aeLedHz;
   }
-  else
-  {  
-    u32Counter = 0;
-    u32Counter_1 = 0;
-    if(!bInversion)                   //Direct cycle
+  
+  if(u16Counter==100&&u8Choose>=0)
+  {
+    LedPWM(WHITE,*(peLed1++));
+  }
+
+  /*2   **********************************/
+  if(peLed2-&aeLedHz[0]==40)
+  {
+    peLed2=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=1)
+  {
+    LedPWM(PURPLE,*(peLed2++));
+  }
+
+  /*3   **********************************/
+  if(peLed3-&aeLedHz[0]==40)
+  {
+    peLed3=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=2)
+  {
+    LedPWM(BLUE,*(peLed3++));
+  }
+  
+  /*4   **********************************/
+  if(peLed4-&aeLedHz[0]==40)
+  {
+    peLed4=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=3)
+  {
+    LedPWM(CYAN,*(peLed4++));
+  }
+
+  /*5   **********************************/
+  if(peLed5-&aeLedHz[0]==40)
+  {
+    peLed5=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=4)
+  {
+    LedPWM(GREEN,*(peLed5++));
+  }
+
+  /*6   **********************************/
+  if(peLed6-&aeLedHz[0]==40)
+  {
+    peLed6=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=5)
+  {
+    LedPWM(YELLOW,*(peLed6++));
+  }
+
+  /*7   **********************************/
+  if(peLed7-&aeLedHz[0]==40)
+  {
+    peLed7=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=6)
+  {
+    LedPWM(ORANGE,*(peLed7++));
+  }
+
+  /*8   **********************************/
+  if(peLed8-&aeLedHz[0]==40)
+  {
+    peLed8=aeLedHz;
+  }
+  
+  if(u16Counter==100&&u8Choose>=7)
+  {
+    LedPWM(RED,*(peLed8++));
+  }
+  
+  /*The adjacent time difference*/  
+  if(u16Counter_1==400)
+  {
+    if(u8Choose<=8)
     {
-      u32Time=u32Time >> 1;
-      if(u32Time == 0)
-      {
-        bInversion = !bInversion;
-        u32Time = 1;                 //To solve the problem : 0 << 1 = 0
-      }
+      u8Choose++;
     }
-    else                             //Negative cycle
-    {
-        u32Time=u32Time << 1;
-        if(u32Time == SET_TIME_2)
-        {
-          bInversion = !bInversion;
-        }
-    }
+    u16Counter_1=0;
+  }
+  
+  if(u16Counter==100)
+  {
+    u16Counter=0;
   }
 } /* end UserApp2SM_Idle() */
      
