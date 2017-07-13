@@ -38,6 +38,8 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_au8DebugScanfBuffer[];                     /* From debug.c */
+extern u8 G_u8DebugScanfCharCount;                     /* From debug.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -74,7 +76,8 @@ Promises:
 */
 void UserApp3Initialize(void)
 {
-  LedBlink(YELLOW,LED_1HZ);
+	PWMAudioOn(BUZZER1);
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -123,70 +126,80 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp3SM_Idle(void)
 {
-  static u8 u8KeyChoose=0;
-  static u8 u8ChooseHz=0;
-  static LedRateType eaBlinkHz[]={LED_1HZ, LED_2HZ, LED_4HZ, LED_8HZ};
-  static u16 u16Counter=0;
-  static u8 u8Counter_1=0;
-  
-  /*Button0 Up*/
-  if(WasButtonPressed(BUTTON0))
-  {
-      u16Counter++;
-      if(u16Counter==1000)
-      {
-        u8Counter_1++;
-      }
-      
-      if(u8Counter_1==3)
-      {
-        u16Counter=0;
-        u8Counter_1=0;
-        ButtonAcknowledge(BUTTON0);
-      }
-      u8KeyChoose=1;
-  }
-  
-  /*Button1 Down*/
-  if(WasButtonPressed(BUTTON1))
-  {
-      u16Counter++;
-      if(u16Counter==1000)
-      {
-        u8Counter_1++;
-      }
-      
-      if(u8Counter_1==3)
-      {
-        u16Counter=0;
-        u8Counter_1=0;
-        ButtonAcknowledge(BUTTON1);
-      }
-      u8KeyChoose=2;
-  }
-  
-  /*Delay 1s*/
-  if(u16Counter==1000)
-  {
-    switch(u8KeyChoose)
-    {
-      case 1:
-        LedBlink(YELLOW,eaBlinkHz[++u8ChooseHz]);
-        u8KeyChoose=0;
-        u16Counter=0;
-        break;
-      
-      case 2:
-        LedBlink(YELLOW,eaBlinkHz[--u8ChooseHz]);
-        u8KeyChoose=0;
-        u16Counter=0;
-        break;
-      
-      default :
-        break;
-    }
-  }
+	static u8 au8ScanfArray[2];
+	static u8 u8ButtonNum=1;
+	static u8 u8Choose=0;
+	u8 u8String[]="\n\rInput error!\n\r";
+	u8 u8String1[]="\n\rSet OK!\n\r";
+	u16 au16VoiceHz[]={65,69,73,78,82,87,92,98,104,110,117,123};
 
+	if(WasButtonPressed(BUTTON0))
+	{
+		ButtonAcknowledge(BUTTON0);
+		u8ButtonNum=1;
+	}
+	
+	if(WasButtonPressed(BUTTON1))
+	{
+		ButtonAcknowledge(BUTTON1);
+		u8ButtonNum=2;
+	}
+	
+	if(WasButtonPressed(BUTTON2))
+	{
+		ButtonAcknowledge(BUTTON2);
+		u8ButtonNum=3;
+	}
+	
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+		u8ButtonNum=4;
+	}
+		
+	if(G_u8DebugScanfCharCount==2)
+	{
+		DebugScanf(au8ScanfArray);
+		
+		if(au8ScanfArray[0]=='0'||au8ScanfArray[0]=='1')
+		{
+			if(au8ScanfArray[0]=='0')
+			{
+				if(au8ScanfArray[1]>='1'&&au8ScanfArray[1]<='9')
+				{
+					u8Choose+=(au8ScanfArray[1]-48);
+					PWMAudioSetFrequency(BUZZER1,u8ButtonNum*au16VoiceHz[u8Choose-1]);
+					DebugPrintf(u8String1);
+				}
+				else
+				{
+					DebugPrintf(u8String);
+				}
+			}
+			
+			if(au8ScanfArray[0]=='1')
+			{
+				u8Choose=10*(au8ScanfArray[0]-48);
+				
+				if(au8ScanfArray[1]>='0'&&au8ScanfArray[1]<='2')
+				{
+					u8Choose+=(au8ScanfArray[1]-48);
+					PWMAudioSetFrequency(BUZZER1,u8ButtonNum*au16VoiceHz[u8Choose-1]);
+					DebugPrintf(u8String1);
+				}
+				else
+				{
+					DebugPrintf(u8String);
+				}
+			}
+		}
+		else
+		{
+			DebugPrintf(u8String);
+		}
+		
+		u8Choose=0;
+	}
 } /* end UserApp3SM_Idle() */
      
 #if 0

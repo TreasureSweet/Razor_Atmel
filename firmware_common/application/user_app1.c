@@ -87,11 +87,12 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-  LedOff(WHITE);
-  LedOn(RED);
-  LedOff(GREEN);
-  LedOff(PURPLE);
-    
+	LedOff(RED);
+	LedOff(WHITE);
+	LedOff(PURPLE);
+	LedOff(BLUE);
+	PWMAudioOff(BUZZER1);
+
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -140,124 +141,108 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-  static u32 u32Password=1111111111;
-  static u32 u32PasswordJudge=0;
-  static u32 u32ChooseTime=0;
-  static bool bPasswordChange=FALSE;
-  static bool bLightOn=FALSE;
-  static u8 u8PreeBlink=0;
-  static u16 u16ChangeBlink=0;
-  
-  u8 u8ButtonNum=5;
-  
-  /*Give every button a num*/
-  if(WasButtonPressed(BUTTON0))
-  {
-    u8ButtonNum=1;
-    LedOn(WHITE);
-    bLightOn=TRUE;
-    ButtonAcknowledge(BUTTON0);
-  }
-  
-  if(WasButtonPressed(BUTTON1))
-  {
-    u8ButtonNum=2;
-    LedOn(WHITE);
-    bLightOn=TRUE;
-    ButtonAcknowledge(BUTTON1);
-  }
-  
-  if(WasButtonPressed(BUTTON2))
-  {
-    u8ButtonNum=3;
-    LedOn(WHITE);
-    bLightOn=TRUE;
-    ButtonAcknowledge(BUTTON2);
-  }
+	static u8 u8RealPassword[]={1,2,3,1,2,3};
+	static u8 u8UserPassword[]={0,0,0,0,0,0};
+	static u8 u8Index=0;
+	static u8 u8Comfirm=0;
+	static u16 u16Counter=0;
+	static bool bPressed=FALSE;
+	static bool bIsOk=TRUE;
+	u8 u8TempIndex;
+	
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+		PWMAudioSetFrequency(BUZZER1,1396);
+		PWMAudioOn(BUZZER1);
+		LedOn(RED);
+		bPressed=TRUE;
+		u8Comfirm++;
+	}
+	
+	if(u8Comfirm==2)
+	{
+		for(u8TempIndex=0;u8TempIndex<6;u8TempIndex++)//If the password is true
+		{
+			if(u8RealPassword[u8TempIndex]!=u8UserPassword[u8TempIndex])
+			{
+				bIsOk=FALSE;
+				break;
+			}
+		}
+		
+		if(bIsOk)
+		{
+			LedOn(WHITE);
+			LedOff(PURPLE);
+		}
+		else
+		{
+			LedOff(WHITE);
+			LedOn(PURPLE);
+		}
+		
+		LedOff(BLUE);
+		u8Comfirm=0;
+		u8Index=0;
+		bIsOk=TRUE;
+	}
+	
+	if(u8Comfirm==1)
+	{
+		LedOn(BLUE);
+		LedOff(WHITE);
+		LedOff(PURPLE);
+		
+		if(u8Index<6)
+		{
+			if(WasButtonPressed(BUTTON0))
+			{
+				ButtonAcknowledge(BUTTON0);
+				PWMAudioSetFrequency(BUZZER1,1046);
+				PWMAudioOn(BUZZER1);
+				LedOn(RED);
+				bPressed=TRUE;
+				u8UserPassword[u8Index]=1;
+				u8Index++;
+			}
+		
+			if(WasButtonPressed(BUTTON1))
+			{
+				ButtonAcknowledge(BUTTON1);
+				PWMAudioSetFrequency(BUZZER1,1174);
+				PWMAudioOn(BUZZER1);
+				LedOn(RED);
+				bPressed=TRUE;
+				u8UserPassword[u8Index]=2;
+				u8Index++;
+			}
+		
+			if(WasButtonPressed(BUTTON2))
+			{
+				ButtonAcknowledge(BUTTON2);
+				PWMAudioSetFrequency(BUZZER1,1318);
+				PWMAudioOn(BUZZER1);
+				LedOn(RED);
+				bPressed=TRUE;
+				u8UserPassword[u8Index]=3;
+				u8Index++;
+			}
+		}		
+	}
+	
+	if(bPressed==TRUE)
+	{
+		u16Counter++;
 
-  if(WasButtonPressed(BUTTON3))
-  {
-    u8ButtonNum=4;
-    LedOn(WHITE);
-    bLightOn=TRUE;
-    ButtonAcknowledge(BUTTON3);
-  }  
-  
-  /*If you want to change password,you must hold BUTTON3 the first 2 scends*/
-  if(u32ChooseTime<2000)
-  {
-    u32ChooseTime++;
-  
-    /*Password change when hold BUTTON3 1.5s*/
-    if(IsButtonHeld(BUTTON3,1500))
-    {
-      bPasswordChange=TRUE;
-      u32Password=0;
-    }
-  
-    if(bPasswordChange)
-    {
-      /*Blink the red an green light ever 1s*/
-      u16ChangeBlink++;
-      u32ChooseTime=0;
-      
-      if(u16ChangeBlink==500)
-      {
-        LedToggle(RED);
-        LedToggle(GREEN);
-        u16ChangeBlink=0;
-      }
-    
-      /*Import password with button0~2,and use button3 to save*/
-      if(u8ButtonNum<4)
-      {
-        u32Password=10*u32Password+u8ButtonNum;
-      }
-      
-      /*Identify and pop-up mode*/
-      if(u8ButtonNum==4)
-      {
-        u32ChooseTime=2000;
-        LedOn(RED);
-        LedOff(GREEN);
-        u16ChangeBlink=0;      
-      }
-    }   
-  }
-  else
-  {
-    /*Inport password and distinguish true or false*/
-    if(u8ButtonNum<4)
-    {
-      u32PasswordJudge=10*u32PasswordJudge+u8ButtonNum;
-    }
-  
-    /*Distinguish when BUTTON4 is pressed*/
-    if(u8ButtonNum==4)
-    {
-      if(u32PasswordJudge==u32Password)//Grenn blink when true and turn off red
-      {
-        LedOff(RED);
-        LedBlink(GREEN,LED_4HZ);
-      }
-      else//Red blink when false
-      {
-        LedBlink(RED,LED_4HZ);
-      }
-    }
-  }
-  
-  /*Push button light*/
-  if(bLightOn)
-  {
-    if(u8PreeBlink++==200)
-    {
-      u8PreeBlink=0;
-      LedOff(WHITE);
-      bLightOn=FALSE;
-    }
-  }
-  
+		if(u16Counter==200)
+		{
+			u16Counter=0;
+			LedOff(RED);
+			bPressed=FALSE;
+			PWMAudioOff(BUZZER1);
+		}
+	}	
 } /* end UserApp1SM_Idle() */
     
 

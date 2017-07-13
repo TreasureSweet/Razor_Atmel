@@ -74,14 +74,14 @@ Promises:
 */
 void UserApp2Initialize(void)
 {
-  LedOff(WHITE);
-  LedOff(PURPLE);
-  LedOff(BLUE);
-  LedOff(CYAN);
-  LedOff(GREEN);
-  LedOff(YELLOW);
-  LedOff(ORANGE);
-  LedOff(RED);
+	LedOff(WHITE);
+	LedOff(RED);
+	LedOff(GREEN);
+	LedOn(YELLOW);
+	LedOn(ORANGE);
+	LedOff(PURPLE);
+	PWMAudioOff(BUZZER1);
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -130,131 +130,176 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp2SM_Idle(void)
 {
-  static u16 u16Counter=0;
-  static u16 u16Counter_1=0;
-  static u8 u8Choose=0;
-  static LedRateType aeLedHz[]={LED_PWM_0, LED_PWM_5, LED_PWM_10, LED_PWM_15, LED_PWM_20, 
-                                LED_PWM_25, LED_PWM_30, LED_PWM_35, LED_PWM_40, LED_PWM_45, 
-                                LED_PWM_50, LED_PWM_55 , LED_PWM_60, LED_PWM_65, LED_PWM_70, 
-                                LED_PWM_75, LED_PWM_80, LED_PWM_85, LED_PWM_90, LED_PWM_95, 
-                                LED_PWM_100,LED_PWM_100,LED_PWM_95,LED_PWM_90,LED_PWM_85,
-                                LED_PWM_80,LED_PWM_75,LED_PWM_70,LED_PWM_65, LED_PWM_60,
-                                LED_PWM_55,LED_PWM_50,LED_PWM_45,LED_PWM_40, LED_PWM_35,
-                                LED_PWM_30,LED_PWM_25,LED_PWM_20,LED_PWM_15,LED_PWM_10,
-                                LED_PWM_5,LED_PWM_0};
-  static LedRateType* peLed1=aeLedHz;
-  static LedRateType* peLed2=aeLedHz;
-  static LedRateType* peLed3=aeLedHz;
-  static LedRateType* peLed4=aeLedHz;
-  static LedRateType* peLed5=aeLedHz;
-  static LedRateType* peLed6=aeLedHz;
-  static LedRateType* peLed7=aeLedHz;
-  static LedRateType* peLed8=aeLedHz;
-  
-  u16Counter++;
-  u16Counter_1++;
-/*1   ************************************/  
-  if(peLed1-&aeLedHz[0]==40)
-  {
-    peLed1=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=0)
-  {
-    LedPWM(WHITE,*(peLed1++));
-  }
+	static u32 u32Password=1111111111;
+	static u32 u32PasswordJudge=0;
+	static u32 u32Choose=0;
+	static bool bLightOn=FALSE;
+	static u8 u8PreeBlink=0;
+	static u16 u16ChangeBlink=0;
 
-  /*2   **********************************/
-  if(peLed2-&aeLedHz[0]==40)
-  {
-    peLed2=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=1)
-  {
-    LedPWM(PURPLE,*(peLed2++));
-  }
+	u8 u8ButtonNum=6;
 
-  /*3   **********************************/
-  if(peLed3-&aeLedHz[0]==40)
-  {
-    peLed3=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=2)
-  {
-    LedPWM(BLUE,*(peLed3++));
-  }
-  
-  /*4   **********************************/
-  if(peLed4-&aeLedHz[0]==40)
-  {
-    peLed4=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=3)
-  {
-    LedPWM(CYAN,*(peLed4++));
-  }
+	/*Give every button a num*/
+	if(WasButtonPressed(BUTTON0))
+	{
+		ButtonAcknowledge(BUTTON0);
+		u8ButtonNum=1;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1046);
+		PWMAudioOn(BUZZER1);
+	}
 
-  /*5   **********************************/
-  if(peLed5-&aeLedHz[0]==40)
-  {
-    peLed5=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=4)
-  {
-    LedPWM(GREEN,*(peLed5++));
-  }
+	if(WasButtonPressed(BUTTON1))
+	{
+		ButtonAcknowledge(BUTTON1);
+		u8ButtonNum=2;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1174);
+		PWMAudioOn(BUZZER1);
+	}
 
-  /*6   **********************************/
-  if(peLed6-&aeLedHz[0]==40)
-  {
-    peLed6=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=5)
-  {
-    LedPWM(YELLOW,*(peLed6++));
-  }
+	if(WasButtonPressed(BUTTON2))
+	{
+		ButtonAcknowledge(BUTTON2);
+		u8ButtonNum=3;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1318);
+		PWMAudioOn(BUZZER1);
+	}
 
-  /*7   **********************************/
-  if(peLed7-&aeLedHz[0]==40)
-  {
-    peLed7=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=6)
-  {
-    LedPWM(ORANGE,*(peLed7++));
-  }
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+		u8ButtonNum=4;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1396);
+		PWMAudioOn(BUZZER1);
+	}
+	
+	if(IsButtonHeld(BUTTON3,1500))
+	{
+		u8ButtonNum=5;
+	}
 
-  /*8   **********************************/
-  if(peLed8-&aeLedHz[0]==40)
-  {
-    peLed8=aeLedHz;
-  }
-  
-  if(u16Counter==100&&u8Choose>=7)
-  {
-    LedPWM(RED,*(peLed8++));
-  }
-  
-  /*The adjacent time difference*/  
-  if(u16Counter_1==400)
-  {
-    if(u8Choose<=8)
-    {
-      u8Choose++;
-    }
-    u16Counter_1=0;
-  }
-  
-  if(u16Counter==100)
-  {
-    u16Counter=0;
-  }
+	/*If you want to change password,you must hold BUTTON3 the first 2 scends*/
+	if(u32Choose<2000)
+	{
+		u32Choose++;
+
+		/*Password change when hold BUTTON3 1.5s*/
+		if(u8ButtonNum==5)
+		{
+			LedOff(ORANGE);
+			LedOff(YELLOW);
+			LedOn(RED);
+			u32Choose=2001;
+			u32Password=0;
+		}
+		
+		if(u32Choose==2000)
+		{
+			LedOff(ORANGE);
+			LedOff(YELLOW);
+			LedOn(RED);
+		}
+	}
+	
+	/*The lock mode.When u32Choose==2000*/
+	if(u32Choose==2000)
+	{
+		/*Inport password and distinguish true or false*/
+		if(u8ButtonNum<4)
+		{
+			u32PasswordJudge=10*u32PasswordJudge+u8ButtonNum;
+		}
+
+		/*Distinguish when BUTTON4 is pressed*/
+		if(u8ButtonNum==4)
+		{
+			if(u32PasswordJudge==u32Password)//Green blink when true and turn off red
+			{
+				LedOff(RED);
+				LedOn(GREEN);
+				u8ButtonNum=6;
+				u32Choose=2002;
+			}
+			else//Red blink when false
+			{
+				LedBlink(RED,LED_4HZ);
+				u32Choose=2003;
+			}
+		}
+	}
+	
+	/*The password change mode.When u32Choose==2001*/
+	if(u32Choose==2001)
+	{
+		/*Blink the red an green light ever 1s*/
+		u16ChangeBlink++;
+
+		if(u16ChangeBlink==500)
+		{
+			LedToggle(RED);
+			LedToggle(GREEN);
+			u16ChangeBlink=0;
+		}
+
+		/*Import password with button0~2,and use button3 to save*/
+		if(u8ButtonNum<4)
+		{
+			u32Password=10*u32Password+u8ButtonNum;
+		}
+
+		/*Identify and pop-up mode*/
+		if(u8ButtonNum==4)
+		{
+			u32Choose=2000;
+			LedOn(RED);
+			LedOff(GREEN);
+			u8ButtonNum=0;
+			u16ChangeBlink=0;
+		}
+	}
+
+	/*If true,go to lock when button3 pressed*/
+	if(u32Choose==2002&&u8ButtonNum==4)
+	{
+		u32Choose=2000;
+		u32PasswordJudge=0;
+		LedOn(RED);
+		LedOff(GREEN);
+	}
+	
+	/*If false,blink red 2s then go to lock*/
+	if(u32Choose>=2003&&u32Choose!=4000)
+	{
+		u32Choose++;
+	}
+	
+	if(u32Choose==4000)
+	{
+		u32Choose=2000;
+		u32PasswordJudge=0;
+		LedOn(RED);
+		LedOff(GREEN);
+	}
+	
+	/*Push button light*/
+	if(bLightOn)
+	{
+		if(u8PreeBlink++==200)
+		{
+			u8PreeBlink=0;
+			LedOff(WHITE);
+			LedOff(PURPLE);
+			PWMAudioOff(BUZZER1);
+			bLightOn=FALSE;
+		}
+	}
 } /* end UserApp2SM_Idle() */
      
 #if 0
@@ -262,7 +307,7 @@ static void UserApp2SM_Idle(void)
 /* Handle an error */
 static void UserApp2SM_Error(void)          
 {
-  
+
 } /* end UserApp2SM_Error() */
 #endif
 
