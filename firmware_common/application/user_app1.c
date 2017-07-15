@@ -52,6 +52,8 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_au8DebugScanfBuffer[];					 /* From debug.c */
+extern u8 G_u8DebugScanfCharCount;					 /* From debug.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -59,7 +61,7 @@ Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
-
+static u8 au8UserInputBuffer[USER_INPUT_BUFFER_SIZE]; /* Char buffer */
 
 /**********************************************************************************************************************
 Function Definitions
@@ -87,12 +89,11 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-	LedOff(RED);
+	LedOn(RED);
 	LedOff(WHITE);
-	LedOff(PURPLE);
-	LedOff(BLUE);
+	LedOff(GREEN);
 	PWMAudioOff(BUZZER1);
-
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -124,7 +125,6 @@ Promises:
 void UserApp1RunActiveState(void)
 {
   UserApp1_StateMachine();
-
 } /* end UserApp1RunActiveState */
 
 
@@ -141,108 +141,156 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-	static u8 u8RealPassword[]={1,2,3,1,2,3};
-	static u8 u8UserPassword[]={0,0,0,0,0,0};
-	static u8 u8Index=0;
-	static u8 u8Comfirm=0;
-	static u16 u16Counter=0;
-	static bool bPressed=FALSE;
-	static bool bIsOk=TRUE;
-	u8 u8TempIndex;
+	static u32 u32Password=123123;
+	static u32 u32PasswordJudge=0;
+	static u16 u16Choose=0;
+	static u8 u8PreeBlink=0;
+	static u8 u8InputLong=0;
+	static u8 u8Count;
+	static bool bLightOn=FALSE;
+	static bool bInputCorrect=TRUE;
 	
-	if(WasButtonPressed(BUTTON3))
+	u8 u8ButtonNum=5;
+
+	/*Tera Control Center*/
+	if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
 	{
-		ButtonAcknowledge(BUTTON3);
-		PWMAudioSetFrequency(BUZZER1,1396);
-		PWMAudioOn(BUZZER1);
-		LedOn(RED);
-		bPressed=TRUE;
-		u8Comfirm++;
-	}
-	
-	if(u8Comfirm==2)
-	{
-		for(u8TempIndex=0;u8TempIndex<6;u8TempIndex++)//If the password is true
+		/*Is the format correct?*/
+		if(G_u8DebugScanfCharCount>=2&&G_u8DebugScanfCharCount<=11)
 		{
-			if(u8RealPassword[u8TempIndex]!=u8UserPassword[u8TempIndex])
+			u8InputLong=G_u8DebugScanfCharCount-2;
+			DebugScanf(au8UserInputBuffer);
+			
+			for(u8Count=0,bInputCorrect=TRUE;u8Count<=u8InputLong;u8Count++)
 			{
-				bIsOk=FALSE;
-				break;
+				if(au8UserInputBuffer[u8Count]<'1'||au8UserInputBuffer[u8Count]>'3')
+				{
+					bInputCorrect=FALSE;
+					DebugPrintf("\n\rFormat error,please only use 1,2,3\n\r");
+					break;
+				}
 			}
-		}
-		
-		if(bIsOk)
-		{
-			LedOn(WHITE);
-			LedOff(PURPLE);
+			
+			/*If correct then put into password*/
+			if(bInputCorrect)
+			{
+				for(u8Count=0,u32Password=0;u8Count<=u8InputLong;u8Count++)
+				{
+					u32Password=u32Password*10+(au8UserInputBuffer[u8Count]-48);
+				}
+				
+				DebugPrintf("\n\rPassword has changed\n\r");
+			}
 		}
 		else
 		{
-			LedOff(WHITE);
-			LedOn(PURPLE);
+			DebugPrintf("\n\rThe password should be less than 10 bits\n\r");
+			DebugScanf(au8UserInputBuffer);
 		}
-		
-		LedOff(BLUE);
-		u8Comfirm=0;
-		u8Index=0;
-		bIsOk=TRUE;
 	}
 	
-	if(u8Comfirm==1)
+	/*Give every button a num*/
+	if(WasButtonPressed(BUTTON0))
 	{
-		LedOn(BLUE);
-		LedOff(WHITE);
-		LedOff(PURPLE);
-		
-		if(u8Index<6)
-		{
-			if(WasButtonPressed(BUTTON0))
-			{
-				ButtonAcknowledge(BUTTON0);
-				PWMAudioSetFrequency(BUZZER1,1046);
-				PWMAudioOn(BUZZER1);
-				LedOn(RED);
-				bPressed=TRUE;
-				u8UserPassword[u8Index]=1;
-				u8Index++;
-			}
-		
-			if(WasButtonPressed(BUTTON1))
-			{
-				ButtonAcknowledge(BUTTON1);
-				PWMAudioSetFrequency(BUZZER1,1174);
-				PWMAudioOn(BUZZER1);
-				LedOn(RED);
-				bPressed=TRUE;
-				u8UserPassword[u8Index]=2;
-				u8Index++;
-			}
-		
-			if(WasButtonPressed(BUTTON2))
-			{
-				ButtonAcknowledge(BUTTON2);
-				PWMAudioSetFrequency(BUZZER1,1318);
-				PWMAudioOn(BUZZER1);
-				LedOn(RED);
-				bPressed=TRUE;
-				u8UserPassword[u8Index]=3;
-				u8Index++;
-			}
-		}		
+		ButtonAcknowledge(BUTTON0);
+		u8ButtonNum=1;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1046);
+		PWMAudioOn(BUZZER1);
 	}
-	
-	if(bPressed==TRUE)
-	{
-		u16Counter++;
 
-		if(u16Counter==200)
+	if(WasButtonPressed(BUTTON1))
+	{
+		ButtonAcknowledge(BUTTON1);
+		u8ButtonNum=2;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1174);
+		PWMAudioOn(BUZZER1);
+	}
+
+	if(WasButtonPressed(BUTTON2))
+	{
+		ButtonAcknowledge(BUTTON2);
+		u8ButtonNum=3;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1318);
+		PWMAudioOn(BUZZER1);
+	}
+
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+		u8ButtonNum=4;
+		LedOn(WHITE);
+		bLightOn=TRUE;
+		PWMAudioSetFrequency(BUZZER1,1396);
+		PWMAudioOn(BUZZER1);
+	}
+	
+	/*The lock mode.When u16Choose==0*/
+	if(u16Choose==0)
+	{
+		/*Inport password and distinguish true or false*/
+		if(u8ButtonNum<4)
 		{
-			u16Counter=0;
-			LedOff(RED);
-			bPressed=FALSE;
-			PWMAudioOff(BUZZER1);
+			u32PasswordJudge=10*u32PasswordJudge+u8ButtonNum;
 		}
-	}	
+
+		/*Distinguish when BUTTON4 is pressed*/
+		if(u8ButtonNum==4)
+		{
+			if(u32PasswordJudge==u32Password)//Green blink when true and turn off red
+			{
+				LedOff(RED);
+				LedOn(GREEN);
+				u8ButtonNum=6;
+				u16Choose=1;
+			}
+			else//Red blink when false
+			{
+				LedBlink(RED,LED_4HZ);
+				u16Choose=2;
+			}
+		}
+	}
+	
+	/*If true,go to lock when button3 pressed*/
+	if(u16Choose==1&&u8ButtonNum==4)
+	{
+		u16Choose=0;
+		u32PasswordJudge=0;
+		LedOn(RED);
+		LedOff(GREEN);
+	}
+	
+	/*If false,blink red 2s then go to lock*/
+	if(u16Choose>=2&&u16Choose!=2000)
+	{
+		u16Choose++;
+	}
+	
+	if(u16Choose==2000)
+	{
+		u16Choose=0;
+		u32PasswordJudge=0;
+		LedOn(RED);
+		LedOff(GREEN);
+	}
+	
+	/*Push button light*/
+	if(bLightOn)
+	{
+		if(u8PreeBlink++==200)
+		{
+			u8PreeBlink=0;
+			LedOff(WHITE);
+			PWMAudioOff(BUZZER1);
+			bLightOn=FALSE;
+		}
+	}
 } /* end UserApp1SM_Idle() */
     
 

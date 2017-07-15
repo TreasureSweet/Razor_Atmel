@@ -38,6 +38,8 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_au8DebugScanfBuffer[];					 /* From debug.c */
+extern u8 G_u8DebugScanfCharCount;					 /* From debug.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -45,7 +47,8 @@ Variable names shall start with "UserApp2_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp2_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp2_u32Timeout;                      /* Timeout counter used across states */
-
+static u8 au8InputBuffer[USER_INPUT_BUFFER_SIZE];    /* Char buffer */
+static u8 au8NameArray[]=NAME;
 
 /**********************************************************************************************************************
 Function Definitions
@@ -74,14 +77,6 @@ Promises:
 */
 void UserApp2Initialize(void)
 {
-	LedOff(WHITE);
-	LedOff(RED);
-	LedOff(GREEN);
-	LedOn(YELLOW);
-	LedOn(ORANGE);
-	LedOff(PURPLE);
-	PWMAudioOff(BUZZER1);
-	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -130,175 +125,76 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp2SM_Idle(void)
 {
-	static u32 u32Password=1111111111;
-	static u32 u32PasswordJudge=0;
-	static u32 u32Choose=0;
-	static bool bLightOn=FALSE;
-	static u8 u8PreeBlink=0;
-	static u16 u16ChangeBlink=0;
-
-	u8 u8ButtonNum=6;
-
-	/*Give every button a num*/
-	if(WasButtonPressed(BUTTON0))
+	static u8 u8Counter=0;
+	static u32 u32CountSize=0;
+	static u32 u32CountSize_1=0;
+	static u8 au8CountSize[sizeof(u32)];
+	static bool bJudge=FALSE;
+	static bool bCheck=FALSE;
+	
+	/*Do Judge when the first alphabet is right*/
+	if(!bJudge)
 	{
-		ButtonAcknowledge(BUTTON0);
-		u8ButtonNum=1;
-		LedOn(WHITE);
-		bLightOn=TRUE;
-		PWMAudioSetFrequency(BUZZER1,1046);
-		PWMAudioOn(BUZZER1);
-	}
-
-	if(WasButtonPressed(BUTTON1))
-	{
-		ButtonAcknowledge(BUTTON1);
-		u8ButtonNum=2;
-		LedOn(WHITE);
-		bLightOn=TRUE;
-		PWMAudioSetFrequency(BUZZER1,1174);
-		PWMAudioOn(BUZZER1);
-	}
-
-	if(WasButtonPressed(BUTTON2))
-	{
-		ButtonAcknowledge(BUTTON2);
-		u8ButtonNum=3;
-		LedOn(WHITE);
-		bLightOn=TRUE;
-		PWMAudioSetFrequency(BUZZER1,1318);
-		PWMAudioOn(BUZZER1);
-	}
-
-	if(WasButtonPressed(BUTTON3))
-	{
-		ButtonAcknowledge(BUTTON3);
-		u8ButtonNum=4;
-		LedOn(WHITE);
-		bLightOn=TRUE;
-		PWMAudioSetFrequency(BUZZER1,1396);
-		PWMAudioOn(BUZZER1);
+		if(G_au8DebugScanfBuffer[0]==au8NameArray[0])
+		{
+			bJudge=TRUE;
+		}
+		else
+		{
+			if(G_u8DebugScanfCharCount!=0)
+			{
+				DebugScanf(au8InputBuffer);//Clear
+			}
+		}
 	}
 	
-	if(IsButtonHeld(BUTTON3,1500))
+	if(bJudge)
 	{
-		u8ButtonNum=5;
-	}
-
-	/*If you want to change password,you must hold BUTTON3 the first 2 scends*/
-	if(u32Choose<2000)
-	{
-		u32Choose++;
-
-		/*Password change when hold BUTTON3 1.5s*/
-		if(u8ButtonNum==5)
+		if(G_au8DebugScanfBuffer[u8Counter+1]!='\0')
 		{
-			LedOff(ORANGE);
-			LedOff(YELLOW);
-			LedOn(RED);
-			u32Choose=2001;
-			u32Password=0;
+			bCheck=TRUE;
+		}
+	}
+	
+	/*Check when keyboard press a key*/
+	if(bCheck)
+	{
+		bCheck=FALSE;
+		
+		if(G_au8DebugScanfBuffer[++u8Counter]!=au8NameArray[u8Counter])
+		{
+			u8Counter=0;
+			DebugScanf(au8InputBuffer);//Clear
+			bJudge=FALSE;
+		}
+	}
+	
+	/*Print when the name is right*/
+	if(u8Counter==sizeof(au8NameArray)-2)
+	{
+		u32CountSize++;
+		DebugScanf(au8InputBuffer);//Clear
+		
+		for(u32CountSize_1=u32CountSize*10,u8Counter=0;u32CountSize_1>0;u32CountSize_1/=10)
+		{
+			u8Counter++;
 		}
 		
-		if(u32Choose==2000)
+		for(u8Counter++;u8Counter>=1;u8Counter--)
 		{
-			LedOff(ORANGE);
-			LedOff(YELLOW);
-			LedOn(RED);
+			au8CountSize[u8Counter-1]='*';
 		}
-	}
-	
-	/*The lock mode.When u32Choose==2000*/
-	if(u32Choose==2000)
-	{
-		/*Inport password and distinguish true or false*/
-		if(u8ButtonNum<4)
-		{
-			u32PasswordJudge=10*u32PasswordJudge+u8ButtonNum;
-		}
-
-		/*Distinguish when BUTTON4 is pressed*/
-		if(u8ButtonNum==4)
-		{
-			if(u32PasswordJudge==u32Password)//Green blink when true and turn off red
-			{
-				LedOff(RED);
-				LedOn(GREEN);
-				u8ButtonNum=6;
-				u32Choose=2002;
-			}
-			else//Red blink when false
-			{
-				LedBlink(RED,LED_4HZ);
-				u32Choose=2003;
-			}
-		}
-	}
-	
-	/*The password change mode.When u32Choose==2001*/
-	if(u32Choose==2001)
-	{
-		/*Blink the red an green light ever 1s*/
-		u16ChangeBlink++;
-
-		if(u16ChangeBlink==500)
-		{
-			LedToggle(RED);
-			LedToggle(GREEN);
-			u16ChangeBlink=0;
-		}
-
-		/*Import password with button0~2,and use button3 to save*/
-		if(u8ButtonNum<4)
-		{
-			u32Password=10*u32Password+u8ButtonNum;
-		}
-
-		/*Identify and pop-up mode*/
-		if(u8ButtonNum==4)
-		{
-			u32Choose=2000;
-			LedOn(RED);
-			LedOff(GREEN);
-			u8ButtonNum=0;
-			u16ChangeBlink=0;
-		}
-	}
-
-	/*If true,go to lock when button3 pressed*/
-	if(u32Choose==2002&&u8ButtonNum==4)
-	{
-		u32Choose=2000;
-		u32PasswordJudge=0;
-		LedOn(RED);
-		LedOff(GREEN);
-	}
-	
-	/*If false,blink red 2s then go to lock*/
-	if(u32Choose>=2003&&u32Choose!=4000)
-	{
-		u32Choose++;
-	}
-	
-	if(u32Choose==4000)
-	{
-		u32Choose=2000;
-		u32PasswordJudge=0;
-		LedOn(RED);
-		LedOff(GREEN);
-	}
-	
-	/*Push button light*/
-	if(bLightOn)
-	{
-		if(u8PreeBlink++==200)
-		{
-			u8PreeBlink=0;
-			LedOff(WHITE);
-			LedOff(PURPLE);
-			PWMAudioOff(BUZZER1);
-			bLightOn=FALSE;
-		}
+		
+		bJudge=FALSE;
+		DebugLineFeed();
+		DebugLineFeed();
+		DebugPrintf(au8CountSize);
+		DebugPrintf("\n\r*");
+		DebugPrintNumber(u32CountSize);
+		DebugPrintf("*\n\r");
+		DebugPrintf(au8CountSize);
+		DebugLineFeed();
+		DebugLineFeed();
 	}
 } /* end UserApp2SM_Idle() */
      
@@ -316,7 +212,7 @@ static void UserApp2SM_Error(void)
 /* State to sit in if init failed */
 static void UserApp2SM_FailedInit(void)          
 {
-    
+  
 } /* end UserApp2SM_FailedInit() */
 
 
