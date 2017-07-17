@@ -38,8 +38,6 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
-extern u8 G_au8DebugScanfBuffer[];					 /* From debug.c */
-extern u8 G_u8DebugScanfCharCount;					 /* From debug.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -47,8 +45,6 @@ Variable names shall start with "UserApp2_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp2_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp2_u32Timeout;                      /* Timeout counter used across states */
-static u8 au8InputBuffer[USER_INPUT_BUFFER_SIZE];    /* Char buffer */
-static u8 au8NameArray[]=NAME;
 
 /**********************************************************************************************************************
 Function Definitions
@@ -125,77 +121,7 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp2SM_Idle(void)
 {
-	static u8 u8Counter=0;
-	static u32 u32CountSize=0;
-	static u32 u32CountSize_1=0;
-	static u8 au8CountSize[sizeof(u32)];
-	static bool bJudge=FALSE;
-	static bool bCheck=FALSE;
-	
-	/*Do Judge when the first alphabet is right*/
-	if(!bJudge)
-	{
-		if(G_au8DebugScanfBuffer[0]==au8NameArray[0])
-		{
-			bJudge=TRUE;
-		}
-		else
-		{
-			if(G_u8DebugScanfCharCount!=0)
-			{
-				DebugScanf(au8InputBuffer);//Clear
-			}
-		}
-	}
-	
-	if(bJudge)
-	{
-		if(G_au8DebugScanfBuffer[u8Counter+1]!='\0')
-		{
-			bCheck=TRUE;
-		}
-	}
-	
-	/*Check when keyboard press a key*/
-	if(bCheck)
-	{
-		bCheck=FALSE;
-		
-		if(G_au8DebugScanfBuffer[++u8Counter]!=au8NameArray[u8Counter])
-		{
-			u8Counter=0;
-			DebugScanf(au8InputBuffer);//Clear
-			bJudge=FALSE;
-		}
-	}
-	
-	/*Print when the name is right*/
-	if(u8Counter==sizeof(au8NameArray)-2)
-	{
-		u32CountSize++;
-		DebugScanf(au8InputBuffer);//Clear
-		
-		for(u32CountSize_1=u32CountSize*10,u8Counter=0;u32CountSize_1>0;u32CountSize_1/=10)
-		{
-			u8Counter++;
-		}
-		
-		for(u8Counter++;u8Counter>=1;u8Counter--)
-		{
-			au8CountSize[u8Counter-1]='*';
-		}
-		
-		bJudge=FALSE;
-		DebugLineFeed();
-		DebugLineFeed();
-		DebugPrintf(au8CountSize);
-		DebugPrintf("\n\r*");
-		DebugPrintNumber(u32CountSize);
-		DebugPrintf("*\n\r");
-		DebugPrintf(au8CountSize);
-		DebugLineFeed();
-		DebugLineFeed();
-	}
+
 } /* end UserApp2SM_Idle() */
      
 #if 0

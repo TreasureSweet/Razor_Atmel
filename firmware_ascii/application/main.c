@@ -14,7 +14,7 @@ All Global variable names shall start with "G_"
 /* New variables */
 volatile u32 G_u32SystemFlags = 0;                     /* Global system flags */
 volatile u32 G_u32ApplicationFlags = 0;                /* Global applications flags: set when application is successfully initialized */
-u32 u32Counter;
+
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* External global variables defined in other files (must indicate which file they are defined in) */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
@@ -42,7 +42,7 @@ the 1ms period.
 void main(void)
 {
   G_u32SystemFlags |= _SYSTEM_INITIALIZING;
-  u32Counter = 0;
+  
   /* Low level initialization */
   WatchDogSetup(); /* During development, does not reset processor if timeout */
   GpioSetup();
@@ -71,8 +71,8 @@ void main(void)
 
   /* Application initialization */
 
-  //UserApp1Initialize();
-  UserApp2Initialize();
+  UserApp1Initialize();
+  //UserApp2Initialize();
   //UserApp3Initialize();
 
   
@@ -101,8 +101,8 @@ void main(void)
     SdCardRunActiveState();
 
     /* Applications */
-    //UserApp1RunActiveState();
-    UserApp2RunActiveState();
+    UserApp1RunActiveState();
+    //UserApp2RunActiveState();
     //UserApp3RunActiveState();  
     
     /* System sleep*/
@@ -110,8 +110,6 @@ void main(void)
     SystemSleep();
     //HEARTBEAT_ON();
     
-    /*u32Counter + 1 every circulation*/
-    u32Counter++;
   } /* end while(1) main super loop */
   
 } /* end main() */
