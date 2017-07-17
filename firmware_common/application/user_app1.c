@@ -52,6 +52,8 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u8 G_au8DebugScanfBuffer[];						/* From debug.c */
+extern u8 G_u8DebugScanfCharCount;						/* From debug.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -87,6 +89,17 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	LedOff(ORANGE);
+	LedOff(PURPLE);
+	LedOff(WHITE);  //Button press
+	LedOff(GREEN);  //When not pause
+	LedOff(RED);    //When pause
+
+	/* Welcome interface initialize */
+	LCDCommand(LCD_CLEAR_CMD);
+	LCDCommand(LCD_DISPLAY_CMD);
+	LCDMessage(LINE1_START_ADDR+6,"Welcome!");
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -134,7 +147,112 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
+	static u8 u8ModeSelect=0;                    //0:WelcomeInterface 1:NameInterface 2:Display
+	static u16 u16Time=0;
+	static u8 u8Count=0;
+	static u8 au8DisplayArray[256]=NULL;         //Keyboard input
+	static bool bPause=FALSE;                    //Pause the modes except mode0
+	static bool bKeyPress=FALSE;                 //Used to blink a led when press
+	static bool bDisplayOn=FALSE;                //Control the blink of LCD
+	
+	/* Pause (Button3) */
+	if(WasButtonPressed(BUTTON3)&&u8ModeSelect!=0)
+	{
+		ButtonAcknowledge(BUTTON3);
+		LedToggle(GREEN);
+		LedToggle(RED);
+		LedOn(WHITE);
+		bKeyPress=TRUE;
+		bPause=!bPause;
+	}/* Finish */
+	
+	
+	/* Use keyboard to change the display */
+	if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+	{
+		G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+		DebugScanf(au8DisplayArray);
+		DebugPrintf("\n\rChange display successfully!\n\rPress button2 to show it.\n\r");
+	}/* Finish */
+	
+	/* Welcome Interface */
+	if(u8ModeSelect==0)
+	{
+		if(u16Time++==500)
+		{
+			u16Time=0;
 
+			if(bDisplayOn)
+			{
+				LCDCommand(LCD_DISPLAY_CMD);
+				LedToggle(PURPLE);
+			}
+			else
+			{
+				LCDCommand(LCD_DISPLAY_CMD | LCD_DISPLAY_ON);
+				LedToggle(ORANGE);
+			}
+
+			bDisplayOn=!bDisplayOn;
+
+			if(u8Count++==8)
+			{
+				u8Count=0;
+				u8ModeSelect=1;
+				LCDCommand(LCD_CLEAR_CMD);
+				LedOff(PURPLE);
+				LedOff(ORANGE);
+				LedOn(GREEN);
+			}
+		}
+	}/* Finish (can add lcd_led) */
+	
+	/* Every application needs to be paused should be written at the following if */
+	if(!bPause)
+	{
+		/* Every Button */
+		if(WasButtonPressed(BUTTON0))
+		{
+			ButtonAcknowledge(BUTTON0);
+			LedOn(WHITE);
+			bKeyPress=TRUE;
+		}
+
+		if(WasButtonPressed(BUTTON1))
+		{
+			ButtonAcknowledge(BUTTON1);
+			LedOn(WHITE);
+			bKeyPress=TRUE;
+		}
+
+		if(WasButtonPressed(BUTTON2))
+		{
+			ButtonAcknowledge(BUTTON2);		//Button2 used to display what keyboard input
+			LedOn(WHITE);
+			bKeyPress=TRUE;
+			u8ModeSelect=2;
+		}/*Not Finish*/
+
+		/* Name Interface */
+		if(u8ModeSelect==1)
+		{
+		}
+
+		/* Display */
+		if(u8ModeSelect==2)
+		{
+		}
+	}
+	
+	/* Blink when button is pressed */
+	if(bKeyPress)
+	{
+		if(u16Time++==200)
+		{
+			u16Time=0;
+			LedOff(WHITE);
+		}
+	}	
 } /* end UserApp1SM_Idle() */
     
 

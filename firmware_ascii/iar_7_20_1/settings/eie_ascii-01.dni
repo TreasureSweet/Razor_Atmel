@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=-1261538405
+Checksum=1253760879
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -41,6 +41,10 @@ Fmt9={W}3:u8FormatSize	3	0
 Fmt10={W}3:u8InputLong	3	0
 Fmt11={W}3:u8KeyChoose	3	0
 Fmt12={W}3:u8Output	3	0
+[Log file]
+LoggingEnabled=_ 0
+LogFile=_ ""
+Category=_ 0
 [TermIOLog]
 LoggingEnabled=_ 0
 LogFile=_ ""
@@ -52,10 +56,6 @@ Mode=1
 Graph=0
 Symbiont=0
 Exclusions=
-[Log file]
-LoggingEnabled=_ 0
-LogFile=_ ""
-Category=_ 0
 [Disassemble mode]
 mode=0
 [Breakpoints2]
