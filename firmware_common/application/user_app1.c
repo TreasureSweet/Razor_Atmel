@@ -52,8 +52,6 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
-extern u8 G_au8DebugScanfBuffer[];						/* From debug.c */
-extern u8 G_u8DebugScanfCharCount;						/* From debug.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -61,6 +59,7 @@ Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
+static u8 au8LedAddr[]={1,3,6,8,11,13,16,18};
 
 /**********************************************************************************************************************
 Function Definitions
@@ -88,18 +87,17 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-	LedOff(ORANGE);
+	LedOff(WHITE);
 	LedOff(PURPLE);
-	LedOff(WHITE);  //Button press
-	LedOff(GREEN);  //When not pause
-	LedOff(RED);    //When pause
-	PWMAudioOff(BUZZER1);
-	PWMAudioSetFrequency(BUZZER1,2000);
-	
-	/* Welcome interface initialize */
+	LedOff(BLUE);
+	LedOff(CYAN);
+	LedOff(GREEN);
+	LedOff(YELLOW);
+	LedOff(ORANGE);
+	LedOff(RED);
 	LCDCommand(LCD_CLEAR_CMD);
-	LCDCommand(LCD_DISPLAY_CMD);
-	LCDMessage(LINE1_START_ADDR+6,"Welcome!");
+	LCDMessage(LINE1_START_ADDR," 0 0  0 0  0 0  0 0 ");
+	LCDMessage(LINE2_START_ADDR+8,"0.0s");
 	
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -148,205 +146,50 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-	static u8 u8ModeSelect=0;                    //0:WelcomeInterface 1:NameInterface 2:Display 3:Interface on Line2
-	static u16 u16Time=0;
-	static u16 u16Time_1=0;
-	static u8 u8Choose=0;
-	static u8 u8Count=0;
-	static u8 u8Count_1=0;
-	static u8 u8LengthCount=0;
-	static u8 au8DisplayArray[256]=NULL;         //Keyboard input
-	static u8 *pu8Point=NULL;
-	static u8 u8Temporary_1=0;
-	static u8 u8Temporary_2=0;
-	static bool bPause=FALSE;                    //Pause the modes except mode0
-	static bool bKeyPress=FALSE;                 //Used to blink a led when press
-	static bool bDisplayOn=FALSE;                //Control the blink of LCD
-	static u8 au8Interface[4][21]={"<<<<<  Hello!  <<<<<","<<<<< My  name <<<<<","<<<<<  My age  <<<<<","<<<<<  Thanks  <<<<<"};
-	static u8 au8Interface_1[2][21]={"*****zhuhongjie*****","*****you  guess*****"};
+	static LedMode asLedInput[]={{RED,1000,2000},
+								{GREEN,1900,2500},
+								{BLUE,2300,6000},
+								{CYAN,3000,5120},
+								{ORANGE,6000,7000},
+								{YELLOW,8000,9120}
+								};
+	static u32 u32Time=0;
+	static u8 u8Time=0;
+	static u8 au8Time[]="0.0s";
+	static u8 u8Count=sizeof(asLedInput)/sizeof(LedMode);
 	
-	/* Pause (Button3) */
-	if(WasButtonPressed(BUTTON3)&&u8ModeSelect!=0)
+	for(u8 i=0;i<u8Count;i++)
 	{
-		ButtonAcknowledge(BUTTON3);
-		LedToggle(GREEN);
-		LedToggle(RED);
-		LedOn(WHITE);
-		PWMAudioOn(BUZZER1);
-		bKeyPress=TRUE;
-		bPause=!bPause;
-	}/* Finish */
-	
-	/* Use keyboard to change the display */
-	if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
-	{
-		G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
-		u8LengthCount=G_u8DebugScanfCharCount-1;
-		DebugScanf(au8DisplayArray);
-		DebugPrintf("\n\rChange display successfully!\n\rPress button2 to show it.\n\r");
-	}/* Finish */
-	
-	/* Welcome Interface */
-	if(u8ModeSelect==0)
-	{
-		if(u16Time++==200)
+		if(asLedInput[i].u32LedOn==u32Time)
 		{
-			u16Time=0;
-
-			if(bDisplayOn)
-			{
-				LCDCommand(LCD_DISPLAY_CMD);
-				LedToggle(PURPLE);
-			}
-			else
-			{
-				LCDCommand(LCD_DISPLAY_CMD | LCD_DISPLAY_ON);
-				LedToggle(ORANGE);
-			}
-
-			bDisplayOn=!bDisplayOn;
-
-			if(u8Count++==8)
-			{
-				u8Count=1;
-				u8ModeSelect=1;
-				LCDCommand(LCD_CLEAR_CMD);
-				LCDCommand(LCD_DISPLAY_CMD | LCD_DISPLAY_ON);
-				LedOff(PURPLE);
-				LedOff(ORANGE);
-				LedOn(GREEN);
-				pu8Point=&au8Interface[0][1];
-			}
-		}
-	}/* Finish (can add lcd_led) */
-	
-	/* Every application needs to be paused should be written at the following if */
-	if(!bPause)
-	{
-		/* Every Button */
-		if(WasButtonPressed(BUTTON0))
-		{
-			ButtonAcknowledge(BUTTON0);
-			LedOn(WHITE);
-			PWMAudioOn(BUZZER1);
-			bKeyPress=TRUE;
-		}
-
-		if(WasButtonPressed(BUTTON1))
-		{
-			ButtonAcknowledge(BUTTON1);
-			LedOn(WHITE);
-			PWMAudioOn(BUZZER1);
-			bKeyPress=TRUE;
-		}
-
-		if(WasButtonPressed(BUTTON2))
-		{
-			ButtonAcknowledge(BUTTON2);		//Button2 used to display what keyboard input
-			LedOn(WHITE);
-			PWMAudioOn(BUZZER1);
-			bKeyPress=TRUE;
-			bDisplayOn=TRUE;
-			u8ModeSelect=2;
-		}/*Not Finish*/
-
-		/* Name Interface */
-		if(u8ModeSelect==1)
-		{	
-			if(u16Time_1++==300)
-			{
-				u16Time_1=0;
-				LCDMessage(LINE1_START_ADDR,pu8Point++);
-				LCDMessage(LINE1_END_ADDR-u8Count_1++,au8Interface[u8Count]);
-				
-				if(u8Count_1==20)
-				{
-					u8Count_1=0;
-					
-					if(u8Count==1||u8Count==2)
-					{
-						LCDClearChars(LINE2_START_ADDR,20);
-						u8ModeSelect=3;
-					}
-					
-					pu8Point=&au8Interface[u8Count++][1];
-				}
-				
-				if(u8Count==4)
-				{
-					u8Count=0;
-				}
-			}
+			LedPWM(asLedInput[i].eLedNum,LED_PWM_100);
+			LCDMessage(LINE1_START_ADDR+au8LedAddr[asLedInput[i].eLedNum],"1");
 		}
 		
-		/* Interface on Line2 */
-		if(u8ModeSelect==3)
+		if(asLedInput[i].u32LedOff==u32Time)
 		{
-			if(u16Time_1++==300)
-			{
-				u16Time_1=0;
-				
-				if(10-u8Count_1>0)
-				{
-					u8Temporary_1=au8Interface_1[u8Choose][u8Count_1];
-					u8Temporary_2=au8Interface_1[u8Choose][19-u8Count_1];
-					LCDMessage(LINE2_START_ADDR+u8Count_1,&u8Temporary_1);
-					LCDMessage(LINE2_END_ADDR-u8Count_1,&u8Temporary_2);
-				}
-				else
-				{
-					LCDClearChars(LINE2_START_ADDR+(u8Count_1-10),1);
-					LCDClearChars(LINE2_END_ADDR-u8Count_1+10,1);
-				}
-				
-				if(u8Count_1++==19)
-				{
-					u8Count_1=0;
-					u8ModeSelect=1;
-					u8Choose++;
-				}
-			}
-			
-			if(u8Choose==2)
-			{
-				u8Choose=0;
-			}
-		}
-		
-		/* Display */
-		if(u8ModeSelect==2)
-		{
-			/* Display on line1 when <= 40 */
-			if(u8LengthCount<=40&&bDisplayOn)
-			{
-				bDisplayOn=FALSE;
-				LCDCommand(LCD_CLEAR_CMD);
-				LCDMessage(LINE1_START_ADDR,au8DisplayArray);
-				LCDMessage(LINE2_START_ADDR,au8DisplayArray+20);
-			}/* Finish */
-			
-			/* Display on line1 when > 40 */
-			if(u8LengthCount>40)
-			{
-				if(u16Time++==300)
-				{
-					u16Time=0;
-					LCDMessage(LINE1_START_ADDR,au8DisplayArray+u8Count++);
-				}
-			}
+			LedPWM(asLedInput[i].eLedNum,LED_PWM_0);
+			LCDMessage(LINE1_START_ADDR+au8LedAddr[asLedInput[i].eLedNum],"0");
 		}
 	}
 	
-	/* Blink when button is pressed */
-	if(bKeyPress)
+	if(u8Time++==100)
 	{
-		if(u16Time++==200)
-		{
-			u16Time=0;
-			LedOff(WHITE);
-			PWMAudioOff(BUZZER1);
-		}
-	}	
+		u8Time=u32Time/100;
+		au8Time[2]=u8Time%10+48;
+		u8Time/=10;
+		au8Time[0]=u8Time%10+48;
+		u8Time=0;
+		LCDClearChars(LINE2_START_ADDR,20);
+		LCDMessage(LINE2_START_ADDR+8,au8Time);
+	}
+	
+	if(++u32Time==10000)
+	{
+		LCDMessage(LINE1_START_ADDR," 0 0  0 0  0 0  0 0 ");
+		u32Time=0;
+		u8Time=0;
+	}
 } /* end UserApp1SM_Idle() */
     
 
