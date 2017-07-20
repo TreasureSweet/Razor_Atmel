@@ -59,7 +59,7 @@ Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
-static u8 au8LedAddr[]={1,3,6,8,11,13,16,18};
+static u8 au8LedAddr[]={1,3,6,8,11,13,16,18};		/* The address to change led state appearence */
 
 /**********************************************************************************************************************
 Function Definitions
@@ -87,6 +87,7 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	/* Led and Lcd initialize */
 	LedOff(WHITE);
 	LedOff(PURPLE);
 	LedOff(BLUE);
@@ -146,6 +147,7 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
+	/* You can add leds by use following format (Colour,when turn on,when trun off) (0000ms~9999ms) */
 	static LedMode asLedInput[]={{RED,1000,2000},
 								{GREEN,1900,2500},
 								{BLUE,2300,6000},
@@ -153,11 +155,13 @@ static void UserApp1SM_Idle(void)
 								{ORANGE,6000,7000},
 								{YELLOW,8000,9120}
 								};
+	/*---------------------------------------------------*/
 	static u32 u32Time=0;
 	static u8 u8Time=0;
 	static u8 au8Time[]="0.0s";
 	static u8 u8Count=sizeof(asLedInput)/sizeof(LedMode);
 	
+	/* Led Control and the effect on line1 */
 	for(u8 i=0;i<u8Count;i++)
 	{
 		if(asLedInput[i].u32LedOn==u32Time)
@@ -173,6 +177,7 @@ static void UserApp1SM_Idle(void)
 		}
 	}
 	
+	/* Time count on line2 */
 	if(u8Time++==100)
 	{
 		u8Time=u32Time/100;
@@ -184,6 +189,7 @@ static void UserApp1SM_Idle(void)
 		LCDMessage(LINE2_START_ADDR+8,au8Time);
 	}
 	
+	/* Clear every 10s */
 	if(++u32Time==10000)
 	{
 		LCDMessage(LINE1_START_ADDR," 0 0  0 0  0 0  0 0 ");
