@@ -43,6 +43,16 @@ All Global variable names shall start with "G_UserApp1"
 /* New variables */
 volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
 
+u8 u8Button_Choose=0;
+u8 u8Tera_Choose=0;
+u8 u8LengthCount;
+bool bPause=FALSE;
+bool bButtonPressed=FALSE;
+LedCommandType asDemoArray[]={{RED,1200,3000},
+							{BLUE,1300,4000},
+							{WHITE,2100,4000},
+							{GREEN,2400,4200}
+							};
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
@@ -52,6 +62,7 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern u32 u32Time_Counter;                            /* From main.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -68,6 +79,28 @@ Function Definitions
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
+void RunLedCommand(LedCommandType asOutputArray[])
+{
+	static LedCommandType *pPoint;
+	
+	for(pPoint=asOutputArray;;pPoint=pPoint->pNext)
+	{
+		if(u32Time_Counter==pPoint->u32LedOn)
+		{
+			LedPWM(pPoint->eLedNum,LED_PWM_100);
+		}
+		
+		if(u32Time_Counter==pPoint->u32LedOff)
+		{
+			LedPWM(pPoint->eLedNum,LED_PWM_0);
+		}
+		
+		if(pPoint->pNext==NULL)
+		{
+			break;
+		}
+	}
+}
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
@@ -87,7 +120,8 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-	/* Led and Lcd initialize */
+	/****************************    Initializations    ***************************/
+	/* Led */
 	LedOff(WHITE);
 	LedOff(PURPLE);
 	LedOff(BLUE);
@@ -96,9 +130,28 @@ void UserApp1Initialize(void)
 	LedOff(YELLOW);
 	LedOff(ORANGE);
 	LedOff(RED);
+	
+	/* Buzzer */
+	PWMAudioOff(BUZZER1);
+	PWMAudioSetFrequency(BUZZER1,1536);
+	
+	/* Lcd */
 	LCDCommand(LCD_CLEAR_CMD);
-	LCDMessage(LINE1_START_ADDR," 0 0  0 0  0 0  0 0 ");
-	LCDMessage(LINE2_START_ADDR+8,"0.0s");
+	LCDMessage(LINE1_START_ADDR+5,"Having Fun !");
+	LCDMessage(LINE2_START_ADDR,"DMO");
+	LCDMessage(LINE2_START_ADDR+6,"USR");
+	LCDMessage(LINE2_START_ADDR+18,"||");
+	
+	/* Debug */
+	
+	/* DemoArrary */
+	u8LengthCount=sizeof(asDemoArray)/sizeof(LedCommandType);
+	
+	for(u8 i=1;i<u8LengthCount;i++)
+	{
+		asDemoArray[i-1].pNext=&asDemoArray[i];
+	}
+	/**********************************    END    *********************************/
 	
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -147,55 +200,51 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-	/* You can add leds by use following format (Colour,when turn on,when trun off) (0000ms~9999ms) */
-	static LedMode asLedInput[]={{RED,1000,2000},
-								{GREEN,1900,2500},
-								{BLUE,2300,6000},
-								{CYAN,3000,5120},
-								{ORANGE,6000,7000},
-								{YELLOW,8000,9120}
-								};
-	/*---------------------------------------------------*/
-	static u32 u32Time=0;
-	static u8 u8Time=0;
-	static u8 au8Time[]="0.0s";
-	static u8 u8Count=sizeof(asLedInput)/sizeof(LedMode);
+	/*******************************    Variables    ******************************/
+	/**/
+	static LedCommandType *pPoint=asDemoArray;
 	
-	/* Led Control and the effect on line1 */
-	for(u8 i=0;i<u8Count;i++)
+	/***********************************   end   **********************************/
+	
+	/********************************    Buttons    *******************************/
+	if(WasButtonPressed(BUTTON0))	// Different in different user_app
 	{
-		if(asLedInput[i].u32LedOn==u32Time)
-		{
-			LedPWM(asLedInput[i].eLedNum,LED_PWM_100);
-			LCDMessage(LINE1_START_ADDR+au8LedAddr[asLedInput[i].eLedNum],"1");
-		}
-		
-		if(asLedInput[i].u32LedOff==u32Time)
-		{
-			LedPWM(asLedInput[i].eLedNum,LED_PWM_0);
-			LCDMessage(LINE1_START_ADDR+au8LedAddr[asLedInput[i].eLedNum],"0");
-		}
+		ButtonAcknowledge(BUTTON0);
+		bButtonPressed=TRUE;
+		u8Button_Choose=1;
+		//PWMAudioOn(BUZZER1);
 	}
 	
-	/* Time count on line2 */
-	if(u8Time++==100)
+	if(WasButtonPressed(BUTTON1))	// Different in different user_app
 	{
-		u8Time=u32Time/100;
-		au8Time[2]=u8Time%10+48;
-		u8Time/=10;
-		au8Time[0]=u8Time%10+48;
-		u8Time=0;
-		LCDClearChars(LINE2_START_ADDR,20);
-		LCDMessage(LINE2_START_ADDR+8,au8Time);
+		ButtonAcknowledge(BUTTON1);
+		bButtonPressed=TRUE;
+		u8Button_Choose=2;
+		//PWMAudioOn(BUZZER1);
 	}
 	
-	/* Clear every 10s */
-	if(++u32Time==10000)
+	if(WasButtonPressed(BUTTON2))	// Different in different user_app
 	{
-		LCDMessage(LINE1_START_ADDR," 0 0  0 0  0 0  0 0 ");
-		u32Time=0;
-		u8Time=0;
+		ButtonAcknowledge(BUTTON2);
+		bButtonPressed=TRUE;
+		u8Button_Choose=3;
+		//PWMAudioOn(BUZZER1);
 	}
+	
+	if(WasButtonPressed(BUTTON3))	// A special button used to pause and go (not fit user_app3)
+	{
+		ButtonAcknowledge(BUTTON3);
+		bButtonPressed=TRUE;
+		u8Button_Choose=4;
+		bPause=!bPause;
+		//PWMAudioOn(BUZZER1);
+	}
+	/**********************************    END    *********************************/
+	
+	/*********************************    Debug    ********************************/
+	
+	/**********************************    END    *********************************/
+	RunLedCommand(asDemoArray);
 } /* end UserApp1SM_Idle() */
     
 

@@ -14,6 +14,7 @@ All Global variable names shall start with "G_"
 /* New variables */
 volatile u32 G_u32SystemFlags = 0;                     /* Global system flags */
 volatile u32 G_u32ApplicationFlags = 0;                /* Global applications flags: set when application is successfully initialized */
+u32 u32Time_Counter=0;                                 /* Time used in user_apps */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* External global variables defined in other files (must indicate which file they are defined in) */
@@ -72,12 +73,12 @@ void main(void)
   /* Application initialization */
 
   UserApp1Initialize();
-  //UserApp2Initialize();
-  //UserApp3Initialize();
+  UserApp2Initialize();
+  UserApp3Initialize();
 
   
   /* Exit initialization */
-  SystemStatusReport();
+  //SystemStatusReport();
   G_u32SystemFlags &= ~_SYSTEM_INITIALIZING;
     
   /* Super loop */  
@@ -102,14 +103,19 @@ void main(void)
 
     /* Applications */
     UserApp1RunActiveState();
-    //UserApp2RunActiveState();
-    //UserApp3RunActiveState();  
+    UserApp2RunActiveState();
+    UserApp3RunActiveState();  
     
     /* System sleep*/
     //HEARTBEAT_OFF();
     SystemSleep();
     //HEARTBEAT_ON();
     
+	/* Time Count */
+	if(u32Time_Counter++==10000)
+	{
+		u32Time_Counter=0;
+	}/* Finish */
   } /* end while(1) main super loop */
   
 } /* end main() */

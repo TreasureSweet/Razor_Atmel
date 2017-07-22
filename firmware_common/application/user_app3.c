@@ -37,7 +37,7 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
-
+extern u32 u32Time_Counter;                            /* From main.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
