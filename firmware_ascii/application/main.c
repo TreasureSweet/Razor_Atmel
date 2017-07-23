@@ -14,13 +14,15 @@ All Global variable names shall start with "G_"
 /* New variables */
 volatile u32 G_u32SystemFlags = 0;                     /* Global system flags */
 volatile u32 G_u32ApplicationFlags = 0;                /* Global applications flags: set when application is successfully initialized */
-u32 u32Time_Counter=0;                                 /* Time used in user_apps */
 
+u32 u32Time_Counter=0;                                 /* Time used in user_apps */
+u8 u8Gradient_Set=20;                                   /* Used in user_apps */
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* External global variables defined in other files (must indicate which file they are defined in) */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
+extern bool bPause;                                    /* From user_app1 */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -40,11 +42,11 @@ contraints but must complete execution regardless of success or failure of start
 the 1ms period.
 ***********************************************************************************************************************/
 
-void main(void)
+          void main(void)
 {
   G_u32SystemFlags |= _SYSTEM_INITIALIZING;
   
-  /* Low level initialization */
+  /* Low level initialization */          
   WatchDogSetup(); /* During development, does not reset processor if timeout */
   GpioSetup();
   ClockSetup();
@@ -112,9 +114,12 @@ void main(void)
     //HEARTBEAT_ON();
     
 	/* Time Count */
-	if(u32Time_Counter++==10000)
+	if(!bPause)
 	{
-		u32Time_Counter=0;
+		if(u32Time_Counter++==10000)
+		{
+			u32Time_Counter=0;
+		}
 	}/* Finish */
   } /* end while(1) main super loop */
   

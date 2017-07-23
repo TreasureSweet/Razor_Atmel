@@ -45,15 +45,65 @@ volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
 
 u8 u8Button_Choose=0;
 u8 u8Tera_Choose=0;
-u8 u8LengthCount;
+u8 u8LengthCount_1;
+u8 u8LengthCount_2;
 bool bPause=FALSE;
 bool bButtonPressed=FALSE;
-LedCommandType asDemoArray[]={{RED,1200,3000},
-							{BLUE,1300,4000},
-							{WHITE,2100,4000},
-							{GREEN,2400,4200}
-							};
-
+LedRateType aeGradient[]={LED_PWM_0,LED_PWM_5,LED_PWM_10,LED_PWM_15,LED_PWM_20, 
+							LED_PWM_25,LED_PWM_30,LED_PWM_35,LED_PWM_40,LED_PWM_45, 
+							LED_PWM_50,LED_PWM_55,LED_PWM_60,LED_PWM_65,LED_PWM_70, 
+							LED_PWM_75, LED_PWM_80,LED_PWM_85, LED_PWM_90,LED_PWM_95, 
+							LED_PWM_100};
+LedCommandType asDemoArray_1[]={{WHITE,0,1000,TRUE},
+								{PURPLE,500,1500,TRUE},
+								{BLUE,1000,2000,TRUE},
+								{CYAN,1500,2500,TRUE},
+								{GREEN,2000,3000,TRUE},
+								{YELLOW,2500,3500,TRUE},
+								{ORANGE,3000,4000,TRUE},
+								{RED,3500,4500,TRUE},
+								{RED,4500,5500,TRUE},
+								{ORANGE,5000,6000,TRUE},
+								{YELLOW,5500,6500,TRUE},
+								{GREEN,6000,7000,TRUE},
+								{CYAN,6500,7500,TRUE},
+								{BLUE,7000,8000,TRUE},
+								{PURPLE,7500,8500,TRUE},
+								{WHITE,8000,9000,TRUE},
+								};
+LedCommandType asDemoArray_2[]={{CYAN,0,2000,TRUE},
+								{GREEN,0,2000,TRUE},
+								{BLUE,500,2500,TRUE},
+								{YELLOW,500,2500,TRUE},
+								{PURPLE,1000,3000,TRUE},
+								{ORANGE,1000,3000,TRUE},
+								{WHITE,1500,3500,TRUE},
+								{RED,1500,3500,TRUE},
+								{WHITE,5000,5500,FALSE},
+								{PURPLE,5500,6000,FALSE},
+								{BLUE,5000,5500,FALSE},
+								{CYAN,5500,6000,FALSE},
+								{GREEN,5000,5500,FALSE},
+								{YELLOW,5500,6000,FALSE},
+								{ORANGE,5000,5500,FALSE},
+								{RED,5500,6000,FALSE},
+								{WHITE,6000,6500,FALSE},
+								{PURPLE,6500,7000,FALSE},
+								{BLUE,6000,6500,FALSE},
+								{CYAN,6500,7000,FALSE},
+								{GREEN,6000,6500,FALSE},
+								{YELLOW,6500,7000,FALSE},
+								{ORANGE,6000,6500,FALSE},
+								{RED,6500,7000,FALSE},
+								{WHITE,7000,7500,FALSE},
+								{PURPLE,7500,8000,FALSE},
+								{BLUE,7000,7500,FALSE},
+								{CYAN,7500,8000,FALSE},
+								{GREEN,7000,7500,FALSE},
+								{YELLOW,7500,8000,FALSE},
+								{ORANGE,7000,7500,FALSE},
+								{RED,7500,8000,FALSE}
+								};
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 extern volatile u32 G_u32SystemFlags;                  /* From main.c */
@@ -63,7 +113,7 @@ extern volatile u32 G_u32SystemTime1ms;                /* From board-specific so
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
 extern u32 u32Time_Counter;                            /* From main.c */
-
+extern u8 u8Gradient_Set;                              /* From main.c */
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp1_" and be declared as static.
@@ -87,12 +137,62 @@ void RunLedCommand(LedCommandType asOutputArray[])
 	{
 		if(u32Time_Counter==pPoint->u32LedOn)
 		{
-			LedPWM(pPoint->eLedNum,LED_PWM_100);
+			pPoint->bOn=TRUE;
+			pPoint->bUp=TRUE;
 		}
 		
 		if(u32Time_Counter==pPoint->u32LedOff)
 		{
-			LedPWM(pPoint->eLedNum,LED_PWM_0);
+			pPoint->bOn=TRUE;
+			pPoint->bUp=FALSE;
+		}
+		
+		if(pPoint->pNext==NULL)
+		{
+			break;
+		}
+	}
+	
+	for(pPoint=asOutputArray;;pPoint=pPoint->pNext)
+	{
+		if(pPoint->bOn)
+		{
+			if(pPoint->bGradient)//Gradient
+			{
+				if(pPoint->u8Gradient_Time++==u8Gradient_Set)
+				{
+					pPoint->u8Gradient_Time=0;
+					 
+					if(pPoint->bUp)
+					{
+						LedPWM(pPoint->eLedNum,*(++pPoint->pGradient));
+					}
+					else
+					{
+						LedPWM(pPoint->eLedNum,*(--pPoint->pGradient));
+					}
+					
+					if(*(pPoint->pGradient)==LED_PWM_0||*(pPoint->pGradient)==LED_PWM_100)
+					{
+						pPoint->bOn=FALSE;
+						pPoint->u8Gradient_Time=u8Gradient_Set;
+					}
+				}
+			}
+
+			if(!pPoint->bGradient)//No gradient
+			{
+				pPoint->bOn=FALSE;
+				
+				if(pPoint->bUp)
+				{
+					LedPWM(pPoint->eLedNum,LED_PWM_100);
+				}
+				else
+				{
+					LedPWM(pPoint->eLedNum,LED_PWM_0);
+				}
+			}
 		}
 		
 		if(pPoint->pNext==NULL)
@@ -145,11 +245,33 @@ void UserApp1Initialize(void)
 	/* Debug */
 	
 	/* DemoArrary */
-	u8LengthCount=sizeof(asDemoArray)/sizeof(LedCommandType);
+	u8LengthCount_1=sizeof(asDemoArray_1)/sizeof(LedCommandType);
+	u8LengthCount_2=sizeof(asDemoArray_2)/sizeof(LedCommandType);
 	
-	for(u8 i=1;i<u8LengthCount;i++)
+	for(u8 i=1;i<u8LengthCount_1;i++)
 	{
-		asDemoArray[i-1].pNext=&asDemoArray[i];
+		asDemoArray_1[i-1].pNext=&asDemoArray_1[i];
+	}
+	
+	for(u8 i=0;i<u8LengthCount_1;i++)
+	{
+		asDemoArray_1[i].pGradient=aeGradient;
+		asDemoArray_1[i].bOn=FALSE;
+		asDemoArray_1[i].bUp=FALSE;
+		asDemoArray_1[i].u8Gradient_Time=u8Gradient_Set;
+	}
+	
+	for(u8 i=1;i<u8LengthCount_2;i++)
+	{
+		asDemoArray_2[i-1].pNext=&asDemoArray_2[i];
+	}
+	
+	for(u8 i=0;i<u8LengthCount_2;i++)
+	{
+		asDemoArray_2[i].pGradient=aeGradient;
+		asDemoArray_2[i].bOn=FALSE;
+		asDemoArray_2[i].bUp=FALSE;
+		asDemoArray_2[i].u8Gradient_Time=u8Gradient_Set;
 	}
 	/**********************************    END    *********************************/
 	
@@ -201,9 +323,8 @@ State Machine Function Definitions
 static void UserApp1SM_Idle(void)
 {
 	/*******************************    Variables    ******************************/
-	/**/
-	static LedCommandType *pPoint=asDemoArray;
-	
+	/* In demo lists */
+	static u8 u8DemoChoose=0;
 	/***********************************   end   **********************************/
 	
 	/********************************    Buttons    *******************************/
@@ -244,7 +365,71 @@ static void UserApp1SM_Idle(void)
 	/*********************************    Debug    ********************************/
 	
 	/**********************************    END    *********************************/
-	RunLedCommand(asDemoArray);
+	
+	/*********************************    Demo    ********************************/
+	if(!bPause)
+	{
+		if(u8Button_Choose==1)
+		{
+			u8Button_Choose=0;
+			u32Time_Counter=0;
+			LedOff(WHITE);
+			LedOff(PURPLE);
+			LedOff(BLUE);
+			LedOff(CYAN);
+			LedOff(GREEN);
+			LedOff(YELLOW);
+			LedOff(ORANGE);
+			LedOff(RED);
+		
+			for(u8 i=0;i<u8LengthCount_1;i++)
+			{
+				asDemoArray_1[i].pGradient=aeGradient;
+				asDemoArray_1[i].bOn=FALSE;
+				asDemoArray_1[i].bUp=FALSE;
+				asDemoArray_1[i].u8Gradient_Time=u8Gradient_Set;
+			}
+			
+				for(u8 i=0;i<u8LengthCount_2;i++)
+			{
+				asDemoArray_2[i].pGradient=aeGradient;
+				asDemoArray_2[i].bOn=FALSE;
+				asDemoArray_2[i].bUp=FALSE;
+				asDemoArray_2[i].u8Gradient_Time=u8Gradient_Set;
+			}
+				
+			if(++u8DemoChoose==3)
+			{
+				u8DemoChoose=0;
+			}
+			
+			if(u8DemoChoose==0)
+			{
+				LCDClearChars(LINE2_START_ADDR+3,2);
+			}
+			
+			if(u8DemoChoose==1)
+			{
+				LCDMessage(LINE2_START_ADDR+3,">1");
+			}
+			
+			if(u8DemoChoose==2)
+			{
+				LCDMessage(LINE2_START_ADDR+3,">2");
+			}
+		}
+		
+		if(u8DemoChoose==1)
+		{
+			RunLedCommand(asDemoArray_1);
+		}
+		
+		if(u8DemoChoose==2)
+		{
+			RunLedCommand(asDemoArray_2);
+		}
+	}
+	/**********************************    END    *********************************/
 } /* end UserApp1SM_Idle() */
     
 

@@ -28,7 +28,12 @@ typedef struct
 	LedNumberType eLedNum;
 	u32 u32LedOn;
 	u32 u32LedOff;
+	bool bGradient;
 	void *pNext;
+	LedRateType *pGradient;
+	bool bOn;
+	bool bUp;
+	u8 u8Gradient_Time;
 }LedCommandType;
 
 /**********************************************************************************************************************
