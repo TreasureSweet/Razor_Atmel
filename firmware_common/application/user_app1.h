@@ -30,11 +30,11 @@ typedef struct
 	u32 u32LedOff;
 	bool bGradient;
 	void *pNext;
-	LedRateType *pGradient;
+	LedRateType *peGradient;
 	bool bOn;
 	bool bUp;
 	u8 u8Gradient_Time;
-}LedCommandType;
+}LedCommandType,*pLedCommandType;
 
 /**********************************************************************************************************************
 Constants / Definitions
@@ -48,6 +48,8 @@ Function Declarations
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 void RunLedCommand(LedCommandType *);
+void LedCommandInitialize(LedCommandType *);
+void PrintLedCommand(LedCommandType *);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */

@@ -49,6 +49,9 @@ u8 u8LengthCount_1;
 u8 u8LengthCount_2;
 bool bPause=FALSE;
 bool bButtonPressed=FALSE;
+pLedCommandType psDemoHead;
+pLedCommandType psUserHead;
+pLedCommandType psUserTail;
 LedRateType aeGradient[]={LED_PWM_0,LED_PWM_5,LED_PWM_10,LED_PWM_15,LED_PWM_20, 
 							LED_PWM_25,LED_PWM_30,LED_PWM_35,LED_PWM_40,LED_PWM_45, 
 							LED_PWM_50,LED_PWM_55,LED_PWM_60,LED_PWM_65,LED_PWM_70, 
@@ -104,6 +107,8 @@ LedCommandType asDemoArray_2[]={{CYAN,0,2000,TRUE},
 								{ORANGE,7000,7500,FALSE},
 								{RED,7500,8000,FALSE}
 								};
+
+LedCommandType asUserArray[200];
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 extern volatile u32 G_u32SystemFlags;                  /* From main.c */
@@ -114,13 +119,13 @@ extern volatile u32 G_u32SystemTime1s;                 /* From board-specific so
 
 extern u32 u32Time_Counter;                            /* From main.c */
 extern u8 u8Gradient_Set;                              /* From main.c */
+
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
-static u8 au8LedAddr[]={1,3,6,8,11,13,16,18};		/* The address to change led state appearence */
 
 /**********************************************************************************************************************
 Function Definitions
@@ -129,76 +134,211 @@ Function Definitions
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
-void RunLedCommand(LedCommandType asOutputArray[])
+
+/* Run led commands */
+void RunLedCommand(LedCommandType *psOutput)
 {
-	static LedCommandType *pPoint;
+	static LedCommandType *psPoint;
 	
-	for(pPoint=asOutputArray;;pPoint=pPoint->pNext)
+	if(psOutput->pNext!=NULL)
 	{
-		if(u32Time_Counter==pPoint->u32LedOn)
+		for(psPoint=psOutput->pNext;;psPoint=psPoint->pNext)
 		{
-			pPoint->bOn=TRUE;
-			pPoint->bUp=TRUE;
+			if(u32Time_Counter==psPoint->u32LedOn)
+			{
+				psPoint->bOn=TRUE;
+				psPoint->bUp=TRUE;
+			}
+			
+			if(u32Time_Counter==psPoint->u32LedOff)
+			{
+				psPoint->bOn=TRUE;
+				psPoint->bUp=FALSE;
+			}
+			
+			if(psPoint->pNext==NULL)
+			{
+				break;
+			}
 		}
 		
-		if(u32Time_Counter==pPoint->u32LedOff)
+		for(psPoint=psOutput->pNext;;psPoint=psPoint->pNext)
 		{
-			pPoint->bOn=TRUE;
-			pPoint->bUp=FALSE;
+			if(psPoint->bOn)
+			{
+				if(psPoint->bGradient)//Gradient
+				{
+					if(psPoint->u8Gradient_Time++==u8Gradient_Set)
+					{
+						psPoint->u8Gradient_Time=0;
+						 
+						if(psPoint->bUp)
+						{
+							LedPWM(psPoint->eLedNum,*(++psPoint->peGradient));
+						}
+						else
+						{
+							LedPWM(psPoint->eLedNum,*(--psPoint->peGradient));
+						}
+						
+						if(*(psPoint->peGradient)==LED_PWM_0||*(psPoint->peGradient)==LED_PWM_100)
+						{
+							psPoint->bOn=FALSE;
+							psPoint->u8Gradient_Time=u8Gradient_Set;
+						}
+					}
+				}
+
+				if(!psPoint->bGradient)//No gradient
+				{
+					psPoint->bOn=FALSE;
+					
+					if(psPoint->bUp)
+					{
+						LedPWM(psPoint->eLedNum,LED_PWM_100);
+					}
+					else
+					{
+						LedPWM(psPoint->eLedNum,LED_PWM_0);
+					}
+				}
+			}
+			
+			if(psPoint->pNext==NULL)
+			{
+				break;
+			}
 		}
+	}
+}/* Finish */
+
+/* LedCommand initialize */
+void LedCommandInitialize(LedCommandType *psOutput)
+{
+	static LedCommandType *psPoint;
+	u32Time_Counter=0;
+	LedOff(WHITE);
+	LedOff(PURPLE);
+	LedOff(BLUE);
+	LedOff(CYAN);
+	LedOff(GREEN);
+	LedOff(YELLOW);
+	LedOff(ORANGE);
+	LedOff(RED);
+	
+	for(psPoint=psOutput;;psPoint=psPoint->pNext)
+	{
+		psPoint->peGradient=aeGradient;
+		psPoint->bOn=FALSE;
+		psPoint->bUp=FALSE;
+		psPoint->u8Gradient_Time=u8Gradient_Set;
 		
-		if(pPoint->pNext==NULL)
+		if(psPoint->pNext==NULL)
 		{
 			break;
 		}
 	}
-	
-	for(pPoint=asOutputArray;;pPoint=pPoint->pNext)
-	{
-		if(pPoint->bOn)
-		{
-			if(pPoint->bGradient)//Gradient
-			{
-				if(pPoint->u8Gradient_Time++==u8Gradient_Set)
-				{
-					pPoint->u8Gradient_Time=0;
-					 
-					if(pPoint->bUp)
-					{
-						LedPWM(pPoint->eLedNum,*(++pPoint->pGradient));
-					}
-					else
-					{
-						LedPWM(pPoint->eLedNum,*(--pPoint->pGradient));
-					}
-					
-					if(*(pPoint->pGradient)==LED_PWM_0||*(pPoint->pGradient)==LED_PWM_100)
-					{
-						pPoint->bOn=FALSE;
-						pPoint->u8Gradient_Time=u8Gradient_Set;
-					}
-				}
-			}
+}/* Finish */
 
-			if(!pPoint->bGradient)//No gradient
+/* LedCommand print */
+void PrintLedCommand(LedCommandType *psPrint)
+{
+	LedCommandType *psPoint=psPrint;
+	
+	if(psPoint->pNext!=NULL)
+	{
+		for(psPoint=psPoint->pNext;;psPoint=psPoint->pNext)
+		{
+			u8 au8PrintArray[]="|        |        |         |          |";
+			
+			switch(psPoint->eLedNum)
 			{
-				pPoint->bOn=FALSE;
+				case WHITE:
+					strcpy(&au8PrintArray[2],"WHITE");
+					break;
+					
+				case PURPLE:
+					strcpy(&au8PrintArray[2],"PURPLE");
+					break;
+					
+				case BLUE:
+					strcpy(&au8PrintArray[2],"BLUE");
+					break;
+					
+				case CYAN:
+					strcpy(&au8PrintArray[2],"CYAN");
+					break;
+					
+				case GREEN:
+					strcpy(&au8PrintArray[2],"GREEN");
+					break;
+					
+				case YELLOW:
+					strcpy(&au8PrintArray[2],"YELLOW");
+					break;
+					
+				case ORANGE:
+					strcpy(&au8PrintArray[2],"ORANGE");
+					break;
+					
+				case RED:
+					strcpy(&au8PrintArray[2],"RED");
+					break;
+			}
+			
+			for(u32 i=0,u32Count=psPoint->u32LedOn;;i++)
+			{
+				au8PrintArray[15-i]=u32Count%10+48;
+				u32Count/=10;
 				
-				if(pPoint->bUp)
+				if(u32Count==0)
 				{
-					LedPWM(pPoint->eLedNum,LED_PWM_100);
-				}
-				else
-				{
-					LedPWM(pPoint->eLedNum,LED_PWM_0);
+					break;
 				}
 			}
+			
+			for(u32 i=0,u32Count=psPoint->u32LedOff;;i++)
+			{
+				au8PrintArray[24-i]=u32Count%10+48;
+				u32Count/=10;
+				
+				if(u32Count==0)
+				{
+					break;
+				}
+			}
+			
+			switch(psPoint->bGradient)
+			{
+				case TRUE:
+					strcpy(&au8PrintArray[33],"YES");
+					break;
+					
+				case FALSE:
+					strcpy(&au8PrintArray[33],"NO");
+					break;
+			}
+			
+			for(u8 i=0;i<40;i++)
+			{
+				if(au8PrintArray[i]=='\0')
+				{
+					au8PrintArray[i]=' ';
+				}
+			}
+				
+			DebugPrintf(au8PrintArray);		
+			DebugLineFeed();
+			
+			if(psPoint->pNext==NULL)
+			{
+				break;
+			}
 		}
-		
-		if(pPoint->pNext==NULL)
-		{
-			break;
-		}
+	}
+	else
+	{
+		DebugPrintf("The Led command is empty !");
 	}
 }
 
@@ -241,9 +381,7 @@ void UserApp1Initialize(void)
 	LCDMessage(LINE2_START_ADDR,"DMO");
 	LCDMessage(LINE2_START_ADDR+6,"USR");
 	LCDMessage(LINE2_START_ADDR+18,"||");
-	
-	/* Debug */
-	
+
 	/* DemoArrary */
 	u8LengthCount_1=sizeof(asDemoArray_1)/sizeof(LedCommandType);
 	u8LengthCount_2=sizeof(asDemoArray_2)/sizeof(LedCommandType);
@@ -255,7 +393,7 @@ void UserApp1Initialize(void)
 	
 	for(u8 i=0;i<u8LengthCount_1;i++)
 	{
-		asDemoArray_1[i].pGradient=aeGradient;
+		asDemoArray_1[i].peGradient=aeGradient;
 		asDemoArray_1[i].bOn=FALSE;
 		asDemoArray_1[i].bUp=FALSE;
 		asDemoArray_1[i].u8Gradient_Time=u8Gradient_Set;
@@ -268,11 +406,17 @@ void UserApp1Initialize(void)
 	
 	for(u8 i=0;i<u8LengthCount_2;i++)
 	{
-		asDemoArray_2[i].pGradient=aeGradient;
+		asDemoArray_2[i].peGradient=aeGradient;
 		asDemoArray_2[i].bOn=FALSE;
 		asDemoArray_2[i].bUp=FALSE;
 		asDemoArray_2[i].u8Gradient_Time=u8Gradient_Set;
 	}
+	
+	/* UserArray */
+	psUserHead=(pLedCommandType)malloc(sizeof(LedCommandType));
+	psDemoHead=(pLedCommandType)malloc(sizeof(LedCommandType));
+	psUserTail=psUserHead;
+	psUserTail->pNext=NULL;
 	/**********************************    END    *********************************/
 	
   /* If good initialization, set state to Idle */
@@ -359,45 +503,26 @@ static void UserApp1SM_Idle(void)
 		u8Button_Choose=4;
 		bPause=!bPause;
 		//PWMAudioOn(BUZZER1);
+		
+		if(bPause)
+		{
+			LCDMessage(LINE2_START_ADDR+18,"> ");
+		}
+		else
+		{
+			LCDMessage(LINE2_START_ADDR+18,"||");
+		}
 	}
 	/**********************************    END    *********************************/
 	
-	/*********************************    Debug    ********************************/
-	
-	/**********************************    END    *********************************/
-	
-	/*********************************    Demo    ********************************/
+	/**********************************    Pause    *********************************/
 	if(!bPause)
 	{
+		/*----------------------------------    Demo    ----------------------------------*/
 		if(u8Button_Choose==1)
 		{
 			u8Button_Choose=0;
-			u32Time_Counter=0;
-			LedOff(WHITE);
-			LedOff(PURPLE);
-			LedOff(BLUE);
-			LedOff(CYAN);
-			LedOff(GREEN);
-			LedOff(YELLOW);
-			LedOff(ORANGE);
-			LedOff(RED);
-		
-			for(u8 i=0;i<u8LengthCount_1;i++)
-			{
-				asDemoArray_1[i].pGradient=aeGradient;
-				asDemoArray_1[i].bOn=FALSE;
-				asDemoArray_1[i].bUp=FALSE;
-				asDemoArray_1[i].u8Gradient_Time=u8Gradient_Set;
-			}
 			
-				for(u8 i=0;i<u8LengthCount_2;i++)
-			{
-				asDemoArray_2[i].pGradient=aeGradient;
-				asDemoArray_2[i].bOn=FALSE;
-				asDemoArray_2[i].bUp=FALSE;
-				asDemoArray_2[i].u8Gradient_Time=u8Gradient_Set;
-			}
-				
 			if(++u8DemoChoose==3)
 			{
 				u8DemoChoose=0;
@@ -406,28 +531,45 @@ static void UserApp1SM_Idle(void)
 			if(u8DemoChoose==0)
 			{
 				LCDClearChars(LINE2_START_ADDR+3,2);
+				u32Time_Counter=0;
+				LedOff(WHITE);
+				LedOff(PURPLE);
+				LedOff(BLUE);
+				LedOff(CYAN);
+				LedOff(GREEN);
+				LedOff(YELLOW);
+				LedOff(ORANGE);
+				LedOff(RED);
 			}
 			
 			if(u8DemoChoose==1)
 			{
-				LCDMessage(LINE2_START_ADDR+3,">1");
+				psDemoHead->pNext=asDemoArray_1;
+				LedCommandInitialize(asDemoArray_2);
+				LCDMessage(LINE2_START_ADDR+3,"<1");
 			}
 			
 			if(u8DemoChoose==2)
 			{
-				LCDMessage(LINE2_START_ADDR+3,">2");
+				psDemoHead->pNext=asDemoArray_2;
+				LedCommandInitialize(asDemoArray_1);
+				LCDMessage(LINE2_START_ADDR+3,"<2");
 			}
 		}
 		
-		if(u8DemoChoose==1)
+		if(u8DemoChoose==1||u8DemoChoose==2)
 		{
-			RunLedCommand(asDemoArray_1);
+			RunLedCommand(psDemoHead);
 		}
+		/*----------------------------------    END    ----------------------------------*/
 		
-		if(u8DemoChoose==2)
+		/*----------------------------------    User    ----------------------------------*/
+		if(u8Button_Choose==2)
 		{
-			RunLedCommand(asDemoArray_2);
+			u8Button_Choose=0;
+			LCDClearChars(LINE2_START_ADDR+3,2);
 		}
+		/*----------------------------------    END    ----------------------------------*/
 	}
 	/**********************************    END    *********************************/
 } /* end UserApp1SM_Idle() */
