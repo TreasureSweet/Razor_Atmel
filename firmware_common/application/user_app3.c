@@ -38,7 +38,9 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 extern u32 u32Time_Counter;                            /* From main.c */
-
+extern bool bButtonPressed;                            /* From user_app1 */
+extern bool bEmpty;                                    /* From user_app1 */
+extern bool bUserChoose;                               /* From user_app1 */
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp3_" and be declared as static.
@@ -122,7 +124,40 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp3SM_Idle(void)
 {
-
+	static u8 u8ButtonTime=0;
+	static u16 u16LcdTime=0;
+	static bool bOn=FALSE;
+	
+	
+	if(bEmpty)
+	{
+		bEmpty=FALSE;
+		bUserChoose=FALSE;
+		LCDClearChars(LINE2_START_ADDR+9,1);
+		bOn=TRUE;
+		u16LcdTime=0;
+	}
+	
+	if(bOn)
+	{
+		if(u16LcdTime++==2000)
+		{
+			u16LcdTime=0;
+			bOn=FALSE;
+			LCDClearChars(LINE1_START_ADDR,20);
+			LCDMessage(LINE1_START_ADDR+5,"Having Fun !");
+		}
+	}
+	
+	if(bButtonPressed)
+	{
+		if(u8ButtonTime++==200)
+		{
+			u8ButtonTime=0;
+			bButtonPressed=FALSE;
+			PWMAudioOff(BUZZER1);
+		}
+	}
 } /* end UserApp3SM_Idle() */
      
 #if 0

@@ -49,7 +49,10 @@ u8 u8LengthCount_1;
 u8 u8LengthCount_2;
 bool bPause=FALSE;
 bool bButtonPressed=FALSE;
-pLedCommandType psDemoHead;
+bool bEmpty=FALSE;
+bool bUserChoose=FALSE;
+pLedCommandType psDemoHead_1;
+pLedCommandType psDemoHead_2;
 pLedCommandType psUserHead;
 pLedCommandType psUserTail;
 LedRateType aeGradient[]={LED_PWM_0,LED_PWM_5,LED_PWM_10,LED_PWM_15,LED_PWM_20, 
@@ -139,7 +142,7 @@ Function Definitions
 void RunLedCommand(LedCommandType *psOutput)
 {
 	static LedCommandType *psPoint;
-	
+
 	if(psOutput->pNext!=NULL)
 	{
 		for(psPoint=psOutput->pNext;;psPoint=psPoint->pNext)
@@ -210,6 +213,16 @@ void RunLedCommand(LedCommandType *psOutput)
 			}
 		}
 	}
+	else
+	{
+		if(!bEmpty)
+		{
+			LCDClearChars(LINE1_START_ADDR,20);
+			LCDMessage(LINE1_START_ADDR+3,"Command empty !");
+		}
+		
+		bEmpty=TRUE;
+	}
 }/* Finish */
 
 /* LedCommand initialize */
@@ -226,69 +239,87 @@ void LedCommandInitialize(LedCommandType *psOutput)
 	LedOff(ORANGE);
 	LedOff(RED);
 	
-	for(psPoint=psOutput;;psPoint=psPoint->pNext)
+	if(psOutput->pNext!=NULL)
 	{
-		psPoint->peGradient=aeGradient;
-		psPoint->bOn=FALSE;
-		psPoint->bUp=FALSE;
-		psPoint->u8Gradient_Time=u8Gradient_Set;
-		
-		if(psPoint->pNext==NULL)
+		for(psPoint=psOutput->pNext;;psPoint=psPoint->pNext)
 		{
-			break;
+			psPoint->peGradient=aeGradient;
+			psPoint->bOn=FALSE;
+			psPoint->bUp=FALSE;
+			psPoint->u8Gradient_Time=u8Gradient_Set;
+			
+			if(psPoint->pNext==NULL)
+			{
+				break;
+			}
 		}
 	}
 }/* Finish */
 
 /* LedCommand print */
-void PrintLedCommand(LedCommandType *psPrint)
+u8 PrintLedCommand(LedCommandType *psPrint)
 {
+	u8 u8Count=0;
 	LedCommandType *psPoint=psPrint;
+	DebugPrintf("| Num |  LED   | TimeON | TimeOFF | Gradient |\n\r");
 	
 	if(psPoint->pNext!=NULL)
 	{
-		for(psPoint=psPoint->pNext;;psPoint=psPoint->pNext)
+		psPoint=psPoint->pNext;
+		
+		for(psPoint=psPoint->pNext;;psPoint=psPoint->pNext,u8Count++)
 		{
-			u8 au8PrintArray[]="|        |        |         |          |";
+			u8 au8PrintArray[]="|     |        |        |         |          |";
+			
+			for(u32 i=0,u32Count=u8Count;;i++)
+			{
+				au8PrintArray[4-i]=u32Count%10+48;
+				u32Count/=10;
+				
+				if(u32Count==0)
+				{
+					break;
+				}
+			}
 			
 			switch(psPoint->eLedNum)
 			{
 				case WHITE:
-					strcpy(&au8PrintArray[2],"WHITE");
+					strcpy(&au8PrintArray[6],"WHITE");
 					break;
 					
 				case PURPLE:
-					strcpy(&au8PrintArray[2],"PURPLE");
+					strcpy(&au8PrintArray[8],"PURPLE");
 					break;
 					
 				case BLUE:
-					strcpy(&au8PrintArray[2],"BLUE");
+					strcpy(&au8PrintArray[8],"BLUE");
 					break;
 					
 				case CYAN:
-					strcpy(&au8PrintArray[2],"CYAN");
+					strcpy(&au8PrintArray[8],"CYAN");
 					break;
 					
 				case GREEN:
-					strcpy(&au8PrintArray[2],"GREEN");
+					strcpy(&au8PrintArray[8],"GREEN");
 					break;
 					
 				case YELLOW:
-					strcpy(&au8PrintArray[2],"YELLOW");
+					strcpy(&au8PrintArray[8],"YELLOW");
 					break;
 					
 				case ORANGE:
-					strcpy(&au8PrintArray[2],"ORANGE");
+					strcpy(&au8PrintArray[8],"ORANGE");
 					break;
 					
 				case RED:
-					strcpy(&au8PrintArray[2],"RED");
+					strcpy(&au8PrintArray[8],"RED");
 					break;
 			}
 			
 			for(u32 i=0,u32Count=psPoint->u32LedOn;;i++)
 			{
-				au8PrintArray[15-i]=u32Count%10+48;
+				au8PrintArray[21-i]=u32Count%10+48;
 				u32Count/=10;
 				
 				if(u32Count==0)
@@ -299,7 +330,7 @@ void PrintLedCommand(LedCommandType *psPrint)
 			
 			for(u32 i=0,u32Count=psPoint->u32LedOff;;i++)
 			{
-				au8PrintArray[24-i]=u32Count%10+48;
+				au8PrintArray[30-i]=u32Count%10+48;
 				u32Count/=10;
 				
 				if(u32Count==0)
@@ -311,23 +342,23 @@ void PrintLedCommand(LedCommandType *psPrint)
 			switch(psPoint->bGradient)
 			{
 				case TRUE:
-					strcpy(&au8PrintArray[33],"YES");
+					strcpy(&au8PrintArray[39],"YES");
 					break;
 					
 				case FALSE:
-					strcpy(&au8PrintArray[33],"NO");
+					strcpy(&au8PrintArray[39],"NO");
 					break;
 			}
 			
-			for(u8 i=0;i<40;i++)
+			for(u8 i=0;i<46;i++)
 			{
 				if(au8PrintArray[i]=='\0')
 				{
 					au8PrintArray[i]=' ';
 				}
 			}
-				
-			DebugPrintf(au8PrintArray);		
+			
+			DebugPrintf(au8PrintArray);
 			DebugLineFeed();
 			
 			if(psPoint->pNext==NULL)
@@ -335,10 +366,15 @@ void PrintLedCommand(LedCommandType *psPrint)
 				break;
 			}
 		}
+		
+		DebugPrintf("=================    END    ==================\n\r");
+		return 1;
 	}
 	else
 	{
-		DebugPrintf("The Led command is empty !");
+		DebugPrintf("            The Led command is empty !         \n\r");
+		DebugPrintf("=================    END    ==================\n\r");
+		return 0;
 	}
 }
 
@@ -414,9 +450,14 @@ void UserApp1Initialize(void)
 	
 	/* UserArray */
 	psUserHead=(pLedCommandType)malloc(sizeof(LedCommandType));
-	psDemoHead=(pLedCommandType)malloc(sizeof(LedCommandType));
 	psUserTail=psUserHead;
 	psUserTail->pNext=NULL;
+	
+	/* DemoArray */
+	psDemoHead_1=(pLedCommandType)malloc(sizeof(LedCommandType));
+	psDemoHead_2=(pLedCommandType)malloc(sizeof(LedCommandType));
+	psDemoHead_1->pNext=asDemoArray_1;
+	psDemoHead_2->pNext=asDemoArray_2;
 	/**********************************    END    *********************************/
 	
   /* If good initialization, set state to Idle */
@@ -522,6 +563,8 @@ static void UserApp1SM_Idle(void)
 		if(u8Button_Choose==1)
 		{
 			u8Button_Choose=0;
+			bUserChoose=FALSE;
+			LCDClearChars(LINE2_START_ADDR+9,1);
 			
 			if(++u8DemoChoose==3)
 			{
@@ -544,22 +587,25 @@ static void UserApp1SM_Idle(void)
 			
 			if(u8DemoChoose==1)
 			{
-				psDemoHead->pNext=asDemoArray_1;
-				LedCommandInitialize(asDemoArray_2);
+				LedCommandInitialize(psDemoHead_1);
 				LCDMessage(LINE2_START_ADDR+3,"<1");
 			}
 			
 			if(u8DemoChoose==2)
 			{
-				psDemoHead->pNext=asDemoArray_2;
-				LedCommandInitialize(asDemoArray_1);
+				LedCommandInitialize(psDemoHead_2);
 				LCDMessage(LINE2_START_ADDR+3,"<2");
 			}
 		}
 		
-		if(u8DemoChoose==1||u8DemoChoose==2)
+		if(u8DemoChoose==1)
 		{
-			RunLedCommand(psDemoHead);
+			RunLedCommand(psDemoHead_1);
+		}
+		
+		if(u8DemoChoose==2)
+		{
+			RunLedCommand(psDemoHead_2);
 		}
 		/*----------------------------------    END    ----------------------------------*/
 		
@@ -567,7 +613,33 @@ static void UserApp1SM_Idle(void)
 		if(u8Button_Choose==2)
 		{
 			u8Button_Choose=0;
+			u8DemoChoose=0;
+			bUserChoose=!bUserChoose;
 			LCDClearChars(LINE2_START_ADDR+3,2);
+			
+			if(bUserChoose)
+			{
+				LedCommandInitialize(psUserHead);
+				LCDMessage(LINE2_START_ADDR+9,"<");
+			}
+			else
+			{
+				u32Time_Counter=0;
+				LedOff(WHITE);
+				LedOff(PURPLE);
+				LedOff(BLUE);
+				LedOff(CYAN);
+				LedOff(GREEN);
+				LedOff(YELLOW);
+				LedOff(ORANGE);
+				LedOff(RED);
+				LCDClearChars(LINE2_START_ADDR+9,1);
+			}
+		}
+		
+		if(bUserChoose)
+		{
+			RunLedCommand(psUserHead);
 		}
 		/*----------------------------------    END    ----------------------------------*/
 	}

@@ -29,12 +29,13 @@ All Global variable names shall start with "G_UserApp2"
 /* New variables */
 volatile u32 G_u32UserApp2Flags;                       /* Global state flags */
 pLedCommandType psNew;
-pLedCommandType psDemoPrint;
 u32 u32Count=0;
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 extern volatile u32 G_u32SystemFlags;                  /* From main.c */
 extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
+extern u8 G_au8DebugScanfBuffer[];                     /* From main.c */
+extern u8 G_u8DebugScanfCharCount;                     /* From main.c */
 
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
@@ -45,7 +46,8 @@ extern u8 u8Tera_Choose;                               /* From user_app1 */
 extern LedRateType aeGradient[];                       /* From user_app1 */
 extern pLedCommandType psUserHead;                     /* From user_app1 */
 extern pLedCommandType psUserTail;                     /* From user_app1 */
-extern LedCommandType asDemoArray_1[];                 /* From user_app1 */
+extern pLedCommandType psDemoHead_1;                   /* From user_app1 */
+extern pLedCommandType psDemoHead_2;                   /* From user_app1 */
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp2_" and be declared as static.
@@ -236,7 +238,9 @@ u8 LedCheck(u8 *pu8Array)
 void LedInput()
 {
 	psNew->pNext=psUserTail->pNext;
-	psUserTail=psNew;
+	psUserTail->pNext=psNew;
+	
+	for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
 }/* Finish */
 
 /* LedAlter */
@@ -264,10 +268,7 @@ Promises:
   - 
 */
 void UserApp2Initialize(void)
-{
-	psDemoPrint=(pLedCommandType)malloc(sizeof(LedCommandType));
-	psDemoPrint->pNext=asDemoArray_1;
-	
+{	
 	/* Debug initialize */
 	DebugPrintf("************************************************\n\r");
 	DebugPrintf("*          Please choose a function            *\n\r");
@@ -325,6 +326,7 @@ static void UserApp2SM_Idle(void)
 	/*******************************    Variables    ******************************/
 	/* In debug */
 	static u8 au8Scanf[2];
+	static u8 au8Input[256];
 	/***********************************   end   **********************************/
 
 	/*********************************    Debug    ********************************/
@@ -335,18 +337,27 @@ static void UserApp2SM_Idle(void)
 		
 		if(au8Scanf[0]=='1')
 		{
+			au8Scanf[0]=NULL;
 			u8Tera_Choose=1;
 			DebugLineFeed();
-			DebugPrintf("\n\r=========   User define mode   =========\n\r");
-			DebugPrintf("|  LED   | TimeON | TimeOFF | Gradient |\n\r");
+			DebugPrintf("\n\r============   User define mode   ============\n\r\n\r");
+			DebugPrintf("1:              Led Input Mode\n\r");
+			DebugPrintf("2:              Led Alter Mode\n\r");
+			DebugPrintf("3:              Led Delete Mode\n\r");
+			DebugPrintf("\n\r=============        END        ==============\n\r");
+			DebugPrintf("Choose a mode:");
 		}
 		
 		if(au8Scanf[0]=='2')
 		{
-			u8Tera_Choose=2;
+			au8Scanf[0]=NULL;
+			u8Tera_Choose=5;
 			DebugLineFeed();
-			DebugPrintf("\n\r============   Show lists   ============\n\r");
-			DebugPrintf("|  LED   | TimeON | TimeOFF | Gradient |\n\r");
+			DebugPrintf("\n\r===============   Show lists   ===============\n\r\n\r");
+			DebugPrintf("1:                Demo_List\n\r");
+			DebugPrintf("2:                User_List\n\r");
+			DebugPrintf("\n\r=============        END        ==============\n\r");
+			DebugPrintf("Choose a list:");
 		}
 	}
 	/*--------------------------------    end    ---------------------------------*/
@@ -354,13 +365,81 @@ static void UserApp2SM_Idle(void)
 	/*-------------------------   Function Choose   ------------------------------*/
 	if(u8Tera_Choose==1)
 	{
-		PrintLedCommand(psDemoPrint);
-		u8Tera_Choose=0;
-		au8Scanf[0]='0';
+		DebugScanf(au8Scanf);
+		
+		switch(au8Scanf[0])
+		{
+			case '1':
+				au8Scanf[0]=NULL;
+				DebugPrintf("\n\r\n\r------------    Led Input Mode    ------------\n\r");
+				DebugPrintf("Function declare:You can add led commands.\n\r");
+				DebugPrintf("Format: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+				DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
+				DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\r");
+				DebugPrintf("Gradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\r");
+				DebugPrintf("For example: r-500-4000-y  G-2000-3000-N\n\r");
+				DebugPrintf("------------          END         ------------\n\r");
+				DebugPrintf("Input a command:");
+				u8Tera_Choose=2;
+				break;
+				
+			case '2':
+				DebugPrintf("\n\r\n\r------------    Led Alter Mode    ------------\n\r");
+				break;
+				
+			case '3':
+				DebugPrintf("\n\r\n\r------------    Led Delete Mode    -----------\n\r");
+				break;
+				
+			default :
+				break;
+		}
 	}
 	
 	if(u8Tera_Choose==2)
 	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
+			
+			if(LedCheck(au8Input))
+			{
+				LedInput();
+				u8Tera_Choose=0;
+			}
+		}
+	}
+	
+	if(u8Tera_Choose==3)
+	{	
+	}
+	
+	if(u8Tera_Choose==4)
+	{	
+	}
+	
+	if(u8Tera_Choose==5)
+	{
+		DebugScanf(au8Scanf);
+		
+		switch(au8Scanf[0])
+		{
+			case '1':
+				DebugPrintf("\n\r\n\r=============      Demo List     =============\n\r");
+				PrintLedCommand(psDemoHead_1);
+				u8Tera_Choose=0;
+				break;
+				
+			case '2':
+				DebugPrintf("\n\r\n\r=============      User List     =============\n\r");
+				PrintLedCommand(psUserHead);
+				u8Tera_Choose=0;
+				break;
+				
+			default :
+				break;
+		}
 	}
 	/*--------------------------------    end    ---------------------------------*/
 	/**********************************    END    *********************************/
