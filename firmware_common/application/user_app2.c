@@ -340,12 +340,7 @@ static void UserApp2SM_Idle(void)
 			au8Scanf[0]=NULL;
 			u8Tera_Choose=1;
 			DebugLineFeed();
-			DebugPrintf("\n\r============   User define mode   ============\n\r\n\r");
-			DebugPrintf("1:              Led Input Mode\n\r");
-			DebugPrintf("2:              Led Alter Mode\n\r");
-			DebugPrintf("3:              Led Delete Mode\n\r");
-			DebugPrintf("\n\r=============        END        ==============\n\r");
-			DebugPrintf("Choose a mode:");
+			DebugPrintf("\n\r============   User define mode   ============\n\r\n\r1:              Led Input Mode\n\r2:              Led Alter Mode\n\r3:              Led Delete Mode\n\r\n\r=============        END        ==============\n\r\n\r=============        END        ==============\n\rChoose a mode:");
 		}
 		
 		if(au8Scanf[0]=='2')
@@ -353,11 +348,7 @@ static void UserApp2SM_Idle(void)
 			au8Scanf[0]=NULL;
 			u8Tera_Choose=5;
 			DebugLineFeed();
-			DebugPrintf("\n\r===============   Show lists   ===============\n\r\n\r");
-			DebugPrintf("1:                Demo_List\n\r");
-			DebugPrintf("2:                User_List\n\r");
-			DebugPrintf("\n\r=============        END        ==============\n\r");
-			DebugPrintf("Choose a list:");
+			DebugPrintf("\n\r===============   Show lists   ===============\n\r\n\r1:                Demo_List\n\r2:                User_List\n\r\n\r=============        END        ==============\n\rChoose a list:");
 		}
 	}
 	/*--------------------------------    end    ---------------------------------*/
@@ -426,15 +417,19 @@ static void UserApp2SM_Idle(void)
 		switch(au8Scanf[0])
 		{
 			case '1':
-				DebugPrintf("\n\r\n\r=============      Demo List     =============\n\r");
-				PrintLedCommand(psDemoHead_1);
-				u8Tera_Choose=0;
+				if(PrintLedCommand(psDemoHead_1))
+				{
+					u8Tera_Choose=0;
+					au8Scanf[0]=NULL;
+				}
 				break;
 				
 			case '2':
-				DebugPrintf("\n\r\n\r=============      User List     =============\n\r");
-				PrintLedCommand(psUserHead);
-				u8Tera_Choose=0;
+				if(PrintLedCommand(psDemoHead_2))
+				{
+					u8Tera_Choose=0;
+					au8Scanf[0]=NULL;
+				}
 				break;
 				
 			default :

@@ -259,122 +259,150 @@ void LedCommandInitialize(LedCommandType *psOutput)
 /* LedCommand print */
 u8 PrintLedCommand(LedCommandType *psPrint)
 {
-	u8 u8Count=0;
-	LedCommandType *psPoint=psPrint;
-	DebugPrintf("| Num |  LED   | TimeON | TimeOFF | Gradient |\n\r");
+	static bool bOn=TRUE;
+	static u8 u8Count;
+	static u8 u8CopyCount=0;
+	static u8 au8Print[256]=NULL;
+	static LedCommandType *psPoint;
+	
+	if(bOn)
+	{
+		bOn=FALSE;
+		u8Count=0;
+		psPoint=psPrint;
+		DebugPrintf("\n\r\n\r============     Command List     ============\n\r| Num |  LED   | TimeON | TimeOFF | Gradient |\n\r");
+		
+		for(u8 i=0;au8Print[i]!='\0';i++)
+		{
+			au8Print[i]=NULL;
+		}
+	}
 	
 	if(psPoint->pNext!=NULL)
 	{
+		u8 au8PrintArray[]="|     |        |        |         |          |\n\r";
 		psPoint=psPoint->pNext;
+		u8Count++;
+		u8CopyCount++;
 		
-		for(psPoint=psPoint->pNext;;psPoint=psPoint->pNext,u8Count++)
+		for(u8 i=0,u8Count_1=u8Count;;i++)
 		{
-			u8 au8PrintArray[]="|     |        |        |         |          |";
+			au8PrintArray[4-i]=u8Count_1%10+48;
+			u8Count_1/=10;
 			
-			for(u32 i=0,u32Count=u8Count;;i++)
-			{
-				au8PrintArray[4-i]=u32Count%10+48;
-				u32Count/=10;
-				
-				if(u32Count==0)
-				{
-					break;
-				}
-			}
-			
-			switch(psPoint->eLedNum)
-			{
-				case WHITE:
-					strcpy(&au8PrintArray[6],"WHITE");
-					break;
-					
-				case PURPLE:
-					strcpy(&au8PrintArray[8],"PURPLE");
-					break;
-					
-				case BLUE:
-					strcpy(&au8PrintArray[8],"BLUE");
-					break;
-					
-				case CYAN:
-					strcpy(&au8PrintArray[8],"CYAN");
-					break;
-					
-				case GREEN:
-					strcpy(&au8PrintArray[8],"GREEN");
-					break;
-					
-				case YELLOW:
-					strcpy(&au8PrintArray[8],"YELLOW");
-					break;
-					
-				case ORANGE:
-					strcpy(&au8PrintArray[8],"ORANGE");
-					break;
-					
-				case RED:
-					strcpy(&au8PrintArray[8],"RED");
-					break;
-			}
-			
-			for(u32 i=0,u32Count=psPoint->u32LedOn;;i++)
-			{
-				au8PrintArray[21-i]=u32Count%10+48;
-				u32Count/=10;
-				
-				if(u32Count==0)
-				{
-					break;
-				}
-			}
-			
-			for(u32 i=0,u32Count=psPoint->u32LedOff;;i++)
-			{
-				au8PrintArray[30-i]=u32Count%10+48;
-				u32Count/=10;
-				
-				if(u32Count==0)
-				{
-					break;
-				}
-			}
-			
-			switch(psPoint->bGradient)
-			{
-				case TRUE:
-					strcpy(&au8PrintArray[39],"YES");
-					break;
-					
-				case FALSE:
-					strcpy(&au8PrintArray[39],"NO");
-					break;
-			}
-			
-			for(u8 i=0;i<46;i++)
-			{
-				if(au8PrintArray[i]=='\0')
-				{
-					au8PrintArray[i]=' ';
-				}
-			}
-			
-			DebugPrintf(au8PrintArray);
-			DebugLineFeed();
-			
-			if(psPoint->pNext==NULL)
+			if(u8Count_1==0)
 			{
 				break;
 			}
 		}
 		
-		DebugPrintf("=================    END    ==================\n\r");
-		return 1;
+		switch(psPoint->eLedNum)
+		{
+			case WHITE:
+				strcpy(&au8PrintArray[8],"WHITE");
+				break;
+				
+			case PURPLE:
+				strcpy(&au8PrintArray[8],"PURPLE");
+				break;
+				
+			case BLUE:
+				strcpy(&au8PrintArray[8],"BLUE");
+				break;
+				
+			case CYAN:
+				strcpy(&au8PrintArray[8],"CYAN");
+				break;
+				
+			case GREEN:
+				strcpy(&au8PrintArray[8],"GREEN");
+				break;
+				
+			case YELLOW:
+				strcpy(&au8PrintArray[8],"YELLOW");
+				break;
+				
+			case ORANGE:
+				strcpy(&au8PrintArray[8],"ORANGE");
+				break;
+				
+			case RED:
+				strcpy(&au8PrintArray[8],"RED");
+				break;
+		}
+		
+		for(u32 i=0,u32Count=psPoint->u32LedOn;;i++)
+		{
+			au8PrintArray[21-i]=u32Count%10+48;
+			u32Count/=10;
+			
+			if(u32Count==0)
+			{
+				break;
+			}
+		}
+		
+		for(u32 i=0,u32Count=psPoint->u32LedOff;;i++)
+		{
+			au8PrintArray[30-i]=u32Count%10+48;
+			u32Count/=10;
+			
+			if(u32Count==0)
+			{
+				break;
+			}
+		}
+		
+		switch(psPoint->bGradient)
+		{
+			case TRUE:
+				strcpy(&au8PrintArray[39],"YES");
+				break;
+				
+			case FALSE:
+				strcpy(&au8PrintArray[39],"NO");
+				break;
+		}
+		
+		for(u8 i=0;i<46;i++)
+		{
+			if(au8PrintArray[i]=='\0')
+			{
+				au8PrintArray[i]=' ';
+			}
+		}
+		
+		strcat(au8Print,au8PrintArray);
+		
+		if(u8CopyCount==10)
+		{
+			u8CopyCount=0;
+			DebugPrintf(au8Print);
+			
+			for(u8 i=0;au8Print[i]!='\0';i++)
+			{
+				au8Print[i]=NULL;
+			}
+		}
+		
+		if(psPoint->pNext==NULL)
+		{
+			bOn=TRUE;
+			DebugPrintf(au8Print);
+			DebugPrintf("=================    END    ==================\n\r");
+			return 1;
+		}
+		
+		if(!bOn)
+		{
+			return 0;
+		}
 	}
 	else
 	{
-		DebugPrintf("            The Led command is empty !         \n\r");
-		DebugPrintf("=================    END    ==================\n\r");
-		return 0;
+		bOn=TRUE;
+		DebugPrintf("            The Led command is empty !         \n\r=================    END    ==================\n\r");
+		return 1;
 	}
 }
 
@@ -396,6 +424,7 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	DebugSetPassthrough();
 	/****************************    Initializations    ***************************/
 	/* Led */
 	LedOff(WHITE);
