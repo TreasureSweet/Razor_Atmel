@@ -25,8 +25,10 @@ Function Declarations
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 u8 LedCheck(u8 *);
-void LedInput(void);
-void LedAlter(void);
+u8 LedInput(void);
+u8 LedInsert(void);
+u8 LedAlter(void);
+u8 LedDelete(void);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */

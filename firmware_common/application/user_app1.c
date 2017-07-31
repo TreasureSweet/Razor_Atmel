@@ -122,6 +122,7 @@ extern volatile u32 G_u32SystemTime1s;                 /* From board-specific so
 
 extern u32 u32Time_Counter;                            /* From main.c */
 extern u8 u8Gradient_Set;                              /* From main.c */
+extern u8 G_au8DebugScanfBuffer[];                     /* From main.c */
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -390,6 +391,8 @@ u8 PrintLedCommand(LedCommandType *psPrint)
 			bOn=TRUE;
 			DebugPrintf(au8Print);
 			DebugPrintf("=================    END    ==================\n\r");
+			
+			
 			return 1;
 		}
 		

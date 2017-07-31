@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=2022166245
+Checksum=1943950508
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -28,7 +28,6 @@ TracePortSize=0x00000000
 Fmt0=LedCommandType-u8Gradient_Time	3	0
 [array_types]
 Fmt0=u8[1]	3	0
-Fmt1=u8[2]	3	0
 [watch_formats]
 Fmt0={W}3:Counter	3	0
 Fmt1={W}3:G_u32DebugFlags	4	0
@@ -53,15 +52,9 @@ Fmt19={W}3:u8KeyChoose	3	0
 Fmt20={W}3:u8LengthCount	3	0
 Fmt21={W}3:u8ModeSelect	3	0
 Fmt22={W}3:u8Output	3	0
-Fmt23={W}3:u8Time	3	0
-Fmt24={W}3:u8Time_Count	3	0
-[Trace1]
-Enabled=0
-ShowSource=1
-[Disassemble mode]
-mode=0
-[Breakpoints2]
-Count=0
+Fmt23={W}3:u8Tera_Choose	3	0
+Fmt24={W}3:u8Time	3	0
+Fmt25={W}3:u8Time_Count	3	0
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""
@@ -69,9 +62,6 @@ Category=_ 0
 [TermIOLog]
 LoggingEnabled=_ 0
 LogFile=_ ""
-[Aliases]
-Count=0
-SuppressDialog=0
 [CallStackLog]
 Enabled=0
 [DriverProfiling]
@@ -80,3 +70,10 @@ Mode=1
 Graph=0
 Symbiont=0
 Exclusions=
+[Disassemble mode]
+mode=0
+[Breakpoints2]
+Count=0
+[Aliases]
+Count=0
+SuppressDialog=0
