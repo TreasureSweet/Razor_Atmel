@@ -283,6 +283,15 @@ u8 LedInsert()
 		DebugPrintf("\n\rInsert after which command ?\n\rInput a Num:");
 	}
 	
+	if(!bOn)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
+		}
+	}
+	
 	if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
 	{
 		DebugScanf(au8Input);

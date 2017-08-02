@@ -60,22 +60,22 @@ LedRateType aeGradient[]={LED_PWM_0,LED_PWM_5,LED_PWM_10,LED_PWM_15,LED_PWM_20,
 							LED_PWM_50,LED_PWM_55,LED_PWM_60,LED_PWM_65,LED_PWM_70, 
 							LED_PWM_75, LED_PWM_80,LED_PWM_85, LED_PWM_90,LED_PWM_95, 
 							LED_PWM_100};
-LedCommandType asDemoArray_1[]={{WHITE,0,1000,TRUE},
-								{PURPLE,500,1500,TRUE},
-								{BLUE,1000,2000,TRUE},
-								{CYAN,1500,2500,TRUE},
-								{GREEN,2000,3000,TRUE},
-								{YELLOW,2500,3500,TRUE},
-								{ORANGE,3000,4000,TRUE},
-								{RED,3500,4500,TRUE},
-								{RED,4500,5500,TRUE},
-								{ORANGE,5000,6000,TRUE},
-								{YELLOW,5500,6500,TRUE},
-								{GREEN,6000,7000,TRUE},
-								{CYAN,6500,7500,TRUE},
-								{BLUE,7000,8000,TRUE},
-								{PURPLE,7500,8500,TRUE},
-								{WHITE,8000,9000,TRUE},
+LedCommandType asDemoArray_1[]={{WHITE,0,1250,TRUE},
+								{PURPLE,250,1500,TRUE},
+								{BLUE,500,1750,TRUE},
+								{CYAN,750,2000,TRUE},
+								{GREEN,1000,2250,TRUE},
+								{YELLOW,1250,2500,TRUE},
+								{ORANGE,1500,2750,TRUE},
+								{RED,1750,3000,TRUE},
+								{RED,5000,6250,TRUE},
+								{ORANGE,5250,6500,TRUE},
+								{YELLOW,5500,6750,TRUE},
+								{GREEN,5750,7000,TRUE},
+								{CYAN,6000,7250,TRUE},
+								{BLUE,6250,7500,TRUE},
+								{PURPLE,6500,7750,TRUE},
+								{WHITE,6750,8000,TRUE},
 								};
 LedCommandType asDemoArray_2[]={{CYAN,0,2000,TRUE},
 								{GREEN,0,2000,TRUE},
@@ -391,8 +391,6 @@ u8 PrintLedCommand(LedCommandType *psPrint)
 			bOn=TRUE;
 			DebugPrintf(au8Print);
 			DebugPrintf("=================    END    ==================\n\r");
-			
-			
 			return 1;
 		}
 		
@@ -446,10 +444,8 @@ void UserApp1Initialize(void)
 	/* Lcd */
 	LCDCommand(LCD_CLEAR_CMD);
 	LCDMessage(LINE1_START_ADDR+5,"Having Fun !");
-	LCDMessage(LINE2_START_ADDR,"DMO");
-	LCDMessage(LINE2_START_ADDR+6,"USR");
-	LCDMessage(LINE2_START_ADDR+18,"||");
-
+	LCDMessage(LINE2_START_ADDR,"DMO   USR    Mut  || ");
+	
 	/* DemoArrary */
 	u8LengthCount_1=sizeof(asDemoArray_1)/sizeof(LedCommandType);
 	u8LengthCount_2=sizeof(asDemoArray_2)/sizeof(LedCommandType);
@@ -540,6 +536,9 @@ State Machine Function Definitions
 static void UserApp1SM_Idle(void)
 {
 	/*******************************    Variables    ******************************/
+	/* In Buttons */
+	static bool bMute=FALSE;
+	
 	/* In demo lists */
 	static u8 u8DemoChoose=0;
 	/***********************************   end   **********************************/
@@ -548,34 +547,60 @@ static void UserApp1SM_Idle(void)
 	if(WasButtonPressed(BUTTON0))	// Different in different user_app
 	{
 		ButtonAcknowledge(BUTTON0);
-		bButtonPressed=TRUE;
 		u8Button_Choose=1;
-		//PWMAudioOn(BUZZER1);
+		
+		if(!bMute)
+		{
+			bButtonPressed=TRUE;
+			PWMAudioOn(BUZZER1);
+		}
 	}
 	
 	if(WasButtonPressed(BUTTON1))	// Different in different user_app
 	{
 		ButtonAcknowledge(BUTTON1);
-		bButtonPressed=TRUE;
 		u8Button_Choose=2;
-		//PWMAudioOn(BUZZER1);
+		
+		if(!bMute)
+		{
+			bButtonPressed=TRUE;
+			PWMAudioOn(BUZZER1);
+		}
 	}
 	
 	if(WasButtonPressed(BUTTON2))	// Different in different user_app
 	{
 		ButtonAcknowledge(BUTTON2);
-		bButtonPressed=TRUE;
 		u8Button_Choose=3;
-		//PWMAudioOn(BUZZER1);
+		bMute=!bMute;
+		
+		if(!bMute)
+		{
+			bButtonPressed=TRUE;
+			PWMAudioOn(BUZZER1);
+		}
+		
+		if(bMute)
+		{
+			LCDMessage(LINE2_START_ADDR+16,"<");
+		}
+		else
+		{
+			LCDClearChars(LINE2_START_ADDR+16,1);
+		}
 	}
 	
 	if(WasButtonPressed(BUTTON3))	// A special button used to pause and go (not fit user_app3)
 	{
 		ButtonAcknowledge(BUTTON3);
-		bButtonPressed=TRUE;
 		u8Button_Choose=4;
 		bPause=!bPause;
-		//PWMAudioOn(BUZZER1);
+		
+		if(!bMute)
+		{
+			bButtonPressed=TRUE;
+			PWMAudioOn(BUZZER1);
+		}
 		
 		if(bPause)
 		{
