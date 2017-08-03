@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=320810733
+Checksum=-1761788437
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -45,16 +45,17 @@ Fmt12={W}3:u8Count_1	3	0
 Fmt13={W}3:u8Counter	3	0
 Fmt14={W}3:u8Counter_1	3	0
 Fmt15={W}3:u8FormatSize	3	0
-Fmt16={W}3:u8Gradient_Time	3	0
-Fmt17={W}3:u8InputLong	3	0
-Fmt18={W}3:u8J	3	0
-Fmt19={W}3:u8KeyChoose	3	0
-Fmt20={W}3:u8LengthCount	3	0
-Fmt21={W}3:u8ModeSelect	3	0
-Fmt22={W}3:u8Output	3	0
-Fmt23={W}3:u8Tera_Choose	3	0
-Fmt24={W}3:u8Time	3	0
-Fmt25={W}3:u8Time_Count	3	0
+Fmt16={W}3:u8FunctionChoose	3	0
+Fmt17={W}3:u8Gradient_Time	3	0
+Fmt18={W}3:u8InputLong	3	0
+Fmt19={W}3:u8J	3	0
+Fmt20={W}3:u8KeyChoose	3	0
+Fmt21={W}3:u8LengthCount	3	0
+Fmt22={W}3:u8ModeSelect	3	0
+Fmt23={W}3:u8Output	3	0
+Fmt24={W}3:u8Tera_Choose	3	0
+Fmt25={W}3:u8Time	3	0
+Fmt26={W}3:u8Time_Count	3	0
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""

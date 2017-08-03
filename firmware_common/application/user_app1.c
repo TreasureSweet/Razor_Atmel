@@ -375,7 +375,7 @@ u8 PrintLedCommand(LedCommandType *psPrint)
 		
 		strcat(au8Print,au8PrintArray);
 		
-		if(u8CopyCount==10)
+		if(u8CopyCount==8)
 		{
 			u8CopyCount=0;
 			DebugPrintf(au8Print);

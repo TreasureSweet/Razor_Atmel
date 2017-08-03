@@ -30,6 +30,7 @@ All Global variable names shall start with "G_UserApp2"
 volatile u32 G_u32UserApp2Flags;                       /* Global state flags */
 pLedCommandType psNew;
 u32 u32Count=0;
+u16 u16Amount=0;
 u8 au8MenuArray[]="\n\r\n\r\n\r************************************************\n\r*          Please choose a function            *\n\r*       1:       User define mode              *\n\r*       2:          Show lists                 *\n\r*    Press Space to return menu at any time    *\n\r************************************************\n\rChoose a function:";
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
@@ -67,8 +68,9 @@ Function Definitions
 /* LedCheck return 1:Format true and then can use psNew; renturn 0:Format false */
 u8 LedCheck(u8 *pu8Array)
 {
-	u8 *pu8Point=pu8Array;
 	bool bCheckOn=FALSE;
+	u8 au8Array[256]=NULL;
+	u8 *pu8Point=au8Array;
 	psNew=(pLedCommandType)malloc(sizeof(LedCommandType));
 	
 	/* Temporary data */
@@ -77,6 +79,22 @@ u8 LedCheck(u8 *pu8Array)
 	u32 u32LedOffTem=0;
 	bool bGradientTem=FALSE;
 	
+	/* Delete '\b' */
+	for(;*pu8Array!='\0';pu8Array++)
+	{
+		if(*pu8Array!='\b')
+		{
+			*pu8Point=*pu8Array;
+			pu8Point++;
+		}
+		else
+		{
+			*(pu8Point-1)=NULL;
+			pu8Point--;
+		}
+	}
+	
+	pu8Point=au8Array;
 	/* Check */
 	if(*(pu8Point+1)=='-')
 	{
@@ -231,29 +249,164 @@ u8 LedCheck(u8 *pu8Array)
 	}
 	else
 	{
-		DebugPrintf("\n\r\n\rFomart Error !\n\rInput a command:");
 		return 0;
 	}
 }/* Finish */
 
 /* LedInput */
-u8 LedInput()
+u8 LedInput()// If press space , return 1 . So use this to sign out this mode . Mode function : Add commands at the end of the list . Need to input one element.
 {
+	static u8 u8FunctionChoose=0;
 	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
 	
-	if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+	if(u8FunctionChoose==0)
 	{
-		G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
-		DebugScanf(au8Input);
-		
-		if(LedCheck(au8Input))
+		u8FunctionChoose=1;
+		DebugPrintf("\n\r\n\r------------    Led Input Mode    ------------\n\rFormat: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+		DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
+		DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------");
+	}
+	
+	if(u8FunctionChoose==1)
+	{
+		if(PrintLedCommand(psUserHead))
 		{
-			psNew->pNext=psUserTail->pNext;
-			psUserTail->pNext=psNew;
+			u8FunctionChoose=2;
+			DebugPrintf("\n\rInput a command:");
+		}
+	}
+	
+	if(u8FunctionChoose==2)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
 			
-			for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
+			if(LedCheck(au8Input))
+			{
+				psNew->pNext=psUserTail->pNext;
+				psUserTail->pNext=psNew;
+				
+				for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
+				
+				u8FunctionChoose=1;
+				u16Amount++;
+			}
+			else
+			{
+				DebugPrintf("\n\r\n\rFomart Error !\n\rInput a command:");
+			}
+		}
+		
+		if(G_u8DebugScanfCharCount>0)
+		{
+			if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
+			{
+				DebugScanf(au8Input);
+				u8FunctionChoose=0;
+				return 1;
+			}
+		}
+	}
+	
+	return 0;
+}/* Finish */
+
+/* LedInsert */
+u8 LedInsert()// If press space , return 1 . So use this to sign out this mode . Mode function : Insert commands at the anywhere . Need to input 2 elements.
+{
+	static u8 u8FunctionChoose=0;
+	u32 u32CommandNum=0;
+	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
+	
+	if(u8FunctionChoose==0)
+	{
+		u8FunctionChoose=1;
+		DebugPrintf("\n\r\n\r------------    Led Insert Mode    ------------\n\rNum: 0 ~ Max number of the list\n\rCommand: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+		DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
+		DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------");
+	}
+	
+	if(u8FunctionChoose==1)
+	{
+		if(PrintLedCommand(psUserHead))
+		{
+			u8FunctionChoose=2;
+			DebugPrintf("\n\rInsert after which command ?\n\rInput a Num:");
+		}
+	}
+
+	if(u8FunctionChoose==2)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
 			
-			DebugPrintf("\n\r\n\rInput success !\n\rInput a command:");
+			for(u8 i=0;;i++)
+			{
+				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				{
+					if(au8Input[i]!='\b')
+					{
+						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
+					}
+					else
+					{
+						u32CommandNum/=10;
+					}
+				}
+				else if(au8Input[i]=='\0')
+				{
+					if(u32CommandNum<=u16Amount)
+					{
+						u8FunctionChoose=3;
+						psUserTail=psUserHead;
+						DebugPrintf("\n\rInput a command:");
+						
+						for(;u32CommandNum>0;u32CommandNum--)
+						{
+							psUserTail=psUserTail->pNext;
+						}
+					}
+					else
+					{
+						DebugPrintf("\n\r\n\rInvalid Command!\n\rInsert after which command ?\n\rInput a Num:");
+					}
+					
+					break;
+				}
+				else
+				{
+					DebugPrintf("\n\r\n\rInvalid Command!\n\rInsert after which command ?\n\rInput a Num:");
+					break;
+				}
+			}
+		}
+	}
+	
+	if(u8FunctionChoose==3)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
+			
+			if(LedCheck(au8Input))
+			{
+				psNew->pNext=psUserTail->pNext;
+				psUserTail->pNext=psNew;
+				u8FunctionChoose=1;
+				
+				for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
+				u16Amount++;
+			}
+			else
+			{
+				u8FunctionChoose=2;
+				DebugPrintf("\n\r\n\rInvalid Command!\n\rInsert after which command ?\n\rInput a Num:");
+			}
 		}
 	}
 	
@@ -262,6 +415,7 @@ u8 LedInput()
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
 		{
 			DebugScanf(au8Input);
+			u8FunctionChoose=0;
 			return 1;
 		}
 	}
@@ -269,45 +423,211 @@ u8 LedInput()
 	return 0;
 }/* Finish */
 
-/* LedInsert */
-u8 LedInsert()
+/* LedAlter */
+u8 LedAlter()
 {
-	static bool bOn=FALSE;
-	static bool bPrint=TRUE;
+	static u8 u8FunctionChoose=0;
+	u32 u32CommandNum=0;
 	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
 	
-	if(bPrint)
+	if(u8FunctionChoose==0)
 	{
-		bPrint=FALSE;
-		PrintLedCommand(psUserHead);
-		DebugPrintf("\n\rInsert after which command ?\n\rInput a Num:");
+		u8FunctionChoose=1;
+		DebugPrintf("\n\r\n\r------------    Led Alter Mode    ------------\n\rNum: 1 ~ Max number of the list\n\rCommand: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+		DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
+		DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------");
 	}
 	
-	if(!bOn)
+	if(u8FunctionChoose==1)
+	{
+		if(PrintLedCommand(psUserHead))
+		{
+			u8FunctionChoose=2;
+			DebugPrintf("\n\rAlter which command ?\n\rInput a Num:");
+		}
+	}
+	
+	if(u8FunctionChoose==2)
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
 			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
+			
+			for(u8 i=0;;i++)
+			{
+				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				{
+					if(au8Input[i]!='\b')
+					{
+						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
+					}
+					else
+					{
+						u32CommandNum/=10;
+					}
+				}
+				else if(au8Input[i]=='\0')
+				{
+					if(u32CommandNum>0&&u32CommandNum<=u16Amount)
+					{
+						u8FunctionChoose=3;
+						psUserTail=psUserHead;
+						DebugPrintf("\n\rInput a command:");
+						
+						for(;u32CommandNum>0;u32CommandNum--)
+						{
+							psUserTail=psUserTail->pNext;
+						}
+					}
+					else
+					{
+						DebugPrintf("\n\r\n\rInvalid Command!\n\rAlter which command ?\n\rInput a Num:");
+					}
+					
+					break;
+				}
+				else
+				{
+					DebugPrintf("\n\r\n\rInvalid Command!\n\rAlter which command ?\n\rInput a Num:");
+					break;
+				}
+			}
 		}
 	}
 	
-	if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
+	if(u8FunctionChoose==3)
 	{
-		DebugScanf(au8Input);
-		return 1;
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
+			
+			if(LedCheck(au8Input))
+			{
+				psUserTail->eLedNum=psNew->eLedNum;
+				psUserTail->u32LedOn=psNew->u32LedOn;
+				psUserTail->u32LedOff=psNew->u32LedOff;
+				psUserTail->bGradient=psNew->bGradient;
+				u8FunctionChoose=1;
+				
+				for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
+			}
+			else
+			{
+				u8FunctionChoose=2;
+				DebugPrintf("\n\r\n\rInvalid Command!\n\rAlter which command ?\n\rInput a Num:");
+			}
+		}
+	}
+	
+	if(G_u8DebugScanfCharCount>0)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
+		{
+			DebugScanf(au8Input);
+			u8FunctionChoose=0;
+			return 1;
+		}
 	}
 	
 	return 0;
-}
+}/* Finish */
 
-/* LedAlter */
-u8 LedAlter()
+/* LedDelete */
+u8 LedDelete()
 {
-	psUserTail->eLedNum=psNew->eLedNum;
-	psUserTail->u32LedOn=psNew->u32LedOn;
-	psUserTail->u32LedOff=psNew->u32LedOff;
-	psUserTail->bGradient=psNew->bGradient;
+	static u8 u8FunctionChoose=0;
+	pLedCommandType psPoint=NULL;
+	u32 u32CommandNum=0;
+	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
+	
+	if(u8FunctionChoose==0)
+	{
+		u8FunctionChoose=1;
+		DebugPrintf("\n\r\n\r------------    Led Delete Mode    -----------\n\rNum: 1 ~ Max number of the list\n\r------------          END         ------------");
+	}
+	
+	if(u8FunctionChoose==1)
+	{
+		if(PrintLedCommand(psUserHead))
+		{
+			u8FunctionChoose=2;
+			DebugPrintf("\n\rDelete which command ?\n\rInput a Num:");
+		}
+	}
+	
+	if(u8FunctionChoose==2)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
+			
+			for(u8 i=0;;i++)
+			{
+				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				{
+					if(au8Input[i]!='\b')
+					{
+						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
+					}
+					else
+					{
+						u32CommandNum/=10;
+					}
+				}
+				else if(au8Input[i]=='\0')
+				{
+					if(u32CommandNum>0&&u32CommandNum<=u16Amount)
+					{
+						u8FunctionChoose=3;
+						psUserTail=psUserHead;
+						DebugPrintf("\n\rInput a command:");
+						
+						for(u32CommandNum--;u32CommandNum>0;u32CommandNum--)
+						{
+							psUserTail=psUserTail->pNext;
+						}
+					}
+					else
+					{
+						DebugPrintf("\n\r\n\rInvalid Command!\n\rDelete which command ?\n\rInput a Num:");
+					}
+					
+					break;
+				}
+				else
+				{
+					DebugPrintf("\n\r\n\rInvalid Command!\n\rDelete which command ?\n\rInput a Num:");
+					break;
+				}
+			}
+		}
+	}
+	
+	if(u8FunctionChoose==3)
+	{
+		u8FunctionChoose=1;
+		psPoint=psUserTail->pNext;
+		psUserTail->pNext=psPoint->pNext;
+		psPoint=NULL;
+		
+		for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
+		u16Amount--;
+	}
+	
+	if(G_u8DebugScanfCharCount>0)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
+		{
+			DebugScanf(au8Input);
+			u8FunctionChoose=0;
+			return 1;
+		}
+	}
+	
+	return 0;
 }/* Finish */
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
@@ -393,7 +713,7 @@ static void UserApp2SM_Idle(void)
 			{
 				case '1':
 					u8Tera_Choose=1;	// Goto User define mode
-					DebugPrintf("\n\r\n\r============   User define mode   ============\n\r\n\r1:              Led Input Mode\n\r2:              Led Alter Mode\n\r3:              Led Delete Mode\n\r\n\r=============        END        ==============\n\rChoose a mode:");
+					DebugPrintf("\n\r\n\r============   User define mode   ============\n\r\n\r1:              Led Input Mode\n\r2:              Led Insert Mode\n\r3:              Led Alter Mode\n\r4:              Led Delete Mode\n\r\n\r=============        END        ==============\n\rChoose a mode:");
 					break;
 					
 				case '2':
@@ -419,25 +739,19 @@ static void UserApp2SM_Idle(void)
 			switch(au8Scanf[0])
 			{
 				case '1':
-					u8Tera_Choose=3;
-					DebugPrintf("\n\r\n\r------------    Led Input Mode    ------------\n\rFunction declare:You can add led commands.\n\rFormat: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
-					DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
-					DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------\n\rInput a command:");
+					u8Tera_Choose=3;	// Goto Input Mode
 					break;
 					
 				case '2':
-					u8Tera_Choose=4;
-					DebugPrintf("\n\r\n\r------------    Led Insert Mode   ------------\n\r");
+					u8Tera_Choose=4;	// Goto Insert Mode
 					break;
 					
 				case '3':
-					u8Tera_Choose=5;
-					DebugPrintf("\n\r\n\r------------    Led Alter Mode    ------------\n\r");
+					u8Tera_Choose=5;	// Goto Alter Mode
 					break;
 					
 				case '4':
-					u8Tera_Choose=6;
-					DebugPrintf("\n\r\n\r------------    Led Delete Mode    -----------\n\r");
+					u8Tera_Choose=6;	// Goto Delete Mode
 					break;
 					
 				case '5':
@@ -469,15 +783,30 @@ static void UserApp2SM_Idle(void)
 	}
 	
 	if(u8Tera_Choose==4)// Led Insert Mode
-	{	
+	{
+		if(LedInsert())
+		{
+			u8Tera_Choose=0;
+			DebugPrintf(au8MenuArray);
+		}
 	}
 	
 	if(u8Tera_Choose==5)// Led Alter Mode
-	{	
+	{
+		if(LedAlter())
+		{
+			u8Tera_Choose=0;
+			DebugPrintf(au8MenuArray);
+		}
 	}
 	
 	if(u8Tera_Choose==6)// Led Delete Mode
 	{
+		if(LedDelete())
+		{
+			u8Tera_Choose=0;
+			DebugPrintf(au8MenuArray);
+		}
 	}
 	
 	if(u8Tera_Choose==7)// Led Set Gradient
