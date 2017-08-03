@@ -41,6 +41,8 @@ extern u32 u32Time_Counter;                            /* From main.c */
 extern bool bButtonPressed;                            /* From user_app1 */
 extern bool bEmpty;                                    /* From user_app1 */
 extern bool bUserChoose;                               /* From user_app1 */
+extern bool bLcdOn;                                    /* From user_app1 */
+extern u16 u16LcdOnTime;                             /* From user_app1 */
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp3_" and be declared as static.
@@ -125,9 +127,8 @@ State Machine Function Definitions
 static void UserApp3SM_Idle(void)
 {
 	static u8 u8ButtonTime=0;
-	static u16 u16LcdTime=0;
+	static u16 u16ClearLcdTime=0;
 	static bool bOn=FALSE;
-	
 	
 	if(bEmpty)
 	{
@@ -135,17 +136,29 @@ static void UserApp3SM_Idle(void)
 		bUserChoose=FALSE;
 		LCDClearChars(LINE2_START_ADDR+9,1);
 		bOn=TRUE;
-		u16LcdTime=0;
+		u16ClearLcdTime=0;
 	}
 	
 	if(bOn)
 	{
-		if(u16LcdTime++==2000)
+		if(u16ClearLcdTime++==2000)
 		{
-			u16LcdTime=0;
+			u16ClearLcdTime=0;
 			bOn=FALSE;
 			LCDClearChars(LINE1_START_ADDR,20);
 			LCDMessage(LINE1_START_ADDR+5,"Having Fun !");
+		}
+	}
+	
+	if(bLcdOn)
+	{
+		if(u16LcdOnTime++==5000)
+		{
+			u16LcdOnTime=0;
+			bLcdOn=FALSE;
+			LedOff(LCD_RED);
+			LedOff(LCD_GREEN);
+			LedOff(LCD_BLUE);
 		}
 	}
 	

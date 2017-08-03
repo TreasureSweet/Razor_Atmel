@@ -47,10 +47,12 @@ u8 u8Button_Choose=0;
 u8 u8Tera_Choose=0;
 u8 u8LengthCount_1;
 u8 u8LengthCount_2;
+u16 u16LcdOnTime=0;
 bool bPause=FALSE;
 bool bButtonPressed=FALSE;
 bool bEmpty=FALSE;
 bool bUserChoose=FALSE;
+bool bLcdOn=TRUE;
 pLedCommandType psDemoHead_1;
 pLedCommandType psDemoHead_2;
 pLedCommandType psUserHead;
@@ -548,6 +550,12 @@ static void UserApp1SM_Idle(void)
 	{
 		ButtonAcknowledge(BUTTON0);
 		u8Button_Choose=1;
+		u16LcdOnTime=0;
+		bLcdOn=TRUE;
+		
+		LedOn(LCD_RED);
+		LedOn(LCD_GREEN);
+		LedOn(LCD_BLUE);
 		
 		if(!bMute)
 		{
@@ -560,6 +568,12 @@ static void UserApp1SM_Idle(void)
 	{
 		ButtonAcknowledge(BUTTON1);
 		u8Button_Choose=2;
+		u16LcdOnTime=0;
+		bLcdOn=TRUE;
+		
+		LedOn(LCD_RED);
+		LedOn(LCD_GREEN);
+		LedOn(LCD_BLUE);
 		
 		if(!bMute)
 		{
@@ -572,7 +586,13 @@ static void UserApp1SM_Idle(void)
 	{
 		ButtonAcknowledge(BUTTON2);
 		u8Button_Choose=3;
+		u16LcdOnTime=0;
+		bLcdOn=TRUE;
 		bMute=!bMute;
+		
+		LedOn(LCD_RED);
+		LedOn(LCD_GREEN);
+		LedOn(LCD_BLUE);
 		
 		if(!bMute)
 		{
@@ -594,7 +614,13 @@ static void UserApp1SM_Idle(void)
 	{
 		ButtonAcknowledge(BUTTON3);
 		u8Button_Choose=4;
+		u16LcdOnTime=0;
+		bLcdOn=TRUE;
 		bPause=!bPause;
+		
+		LedOn(LCD_RED);
+		LedOn(LCD_GREEN);
+		LedOn(LCD_BLUE);
 		
 		if(!bMute)
 		{
