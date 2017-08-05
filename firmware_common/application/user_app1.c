@@ -53,6 +53,7 @@ bool bButtonPressed=FALSE;
 bool bEmpty=FALSE;
 bool bUserChoose=FALSE;
 bool bLcdOn=TRUE;
+bool bDebug_Set=FALSE;
 pLedCommandType psDemoHead_1;
 pLedCommandType psDemoHead_2;
 pLedCommandType psUserHead;
@@ -62,55 +63,47 @@ LedRateType aeGradient[]={LED_PWM_0,LED_PWM_5,LED_PWM_10,LED_PWM_15,LED_PWM_20,
 							LED_PWM_50,LED_PWM_55,LED_PWM_60,LED_PWM_65,LED_PWM_70, 
 							LED_PWM_75, LED_PWM_80,LED_PWM_85, LED_PWM_90,LED_PWM_95, 
 							LED_PWM_100};
-LedCommandType asDemoArray_1[]={{WHITE,0,1250,TRUE},
-								{PURPLE,250,1500,TRUE},
-								{BLUE,500,1750,TRUE},
-								{CYAN,750,2000,TRUE},
-								{GREEN,1000,2250,TRUE},
-								{YELLOW,1250,2500,TRUE},
-								{ORANGE,1500,2750,TRUE},
-								{RED,1750,3000,TRUE},
-								{RED,5000,6250,TRUE},
-								{ORANGE,5250,6500,TRUE},
-								{YELLOW,5500,6750,TRUE},
-								{GREEN,5750,7000,TRUE},
-								{CYAN,6000,7250,TRUE},
-								{BLUE,6250,7500,TRUE},
-								{PURPLE,6500,7750,TRUE},
-								{WHITE,6750,8000,TRUE},
+LedCommandType asDemoArray_1[]={{WHITE,0,1900,TRUE},
+								{PURPLE,400,2300,TRUE},
+								{BLUE,800,2700,TRUE},
+								{CYAN,1200,3100,TRUE},
+								{GREEN,1600,3500,TRUE},
+								{YELLOW,2000,3900,TRUE},
+								{ORANGE,2400,4300,TRUE},
+								{RED,2800,4700,TRUE},
+								{RED,5000,6900,TRUE},
+								{ORANGE,5400,7300,TRUE},
+								{YELLOW,5800,7700,TRUE},
+								{GREEN,6200,8100,TRUE},
+								{CYAN,6600,8500,TRUE},
+								{BLUE,7000,8900,TRUE},
+								{PURPLE,7400,9300,TRUE},
+								{WHITE,7800,9700,TRUE}
 								};
-LedCommandType asDemoArray_2[]={{CYAN,0,2000,TRUE},
-								{GREEN,0,2000,TRUE},
-								{BLUE,500,2500,TRUE},
-								{YELLOW,500,2500,TRUE},
-								{PURPLE,1000,3000,TRUE},
-								{ORANGE,1000,3000,TRUE},
-								{WHITE,1500,3500,TRUE},
-								{RED,1500,3500,TRUE},
-								{WHITE,5000,5500,FALSE},
-								{PURPLE,5500,6000,FALSE},
-								{BLUE,5000,5500,FALSE},
-								{CYAN,5500,6000,FALSE},
-								{GREEN,5000,5500,FALSE},
-								{YELLOW,5500,6000,FALSE},
-								{ORANGE,5000,5500,FALSE},
-								{RED,5500,6000,FALSE},
-								{WHITE,6000,6500,FALSE},
-								{PURPLE,6500,7000,FALSE},
-								{BLUE,6000,6500,FALSE},
-								{CYAN,6500,7000,FALSE},
-								{GREEN,6000,6500,FALSE},
-								{YELLOW,6500,7000,FALSE},
-								{ORANGE,6000,6500,FALSE},
-								{RED,6500,7000,FALSE},
-								{WHITE,7000,7500,FALSE},
-								{PURPLE,7500,8000,FALSE},
-								{BLUE,7000,7500,FALSE},
-								{CYAN,7500,8000,FALSE},
-								{GREEN,7000,7500,FALSE},
-								{YELLOW,7500,8000,FALSE},
-								{ORANGE,7000,7500,FALSE},
-								{RED,7500,8000,FALSE}
+LedCommandType asDemoArray_2[]={{CYAN,0,1800,TRUE},
+								{GREEN,0,1800,TRUE},
+								{BLUE,300,2100,TRUE},
+								{YELLOW,300,2100,TRUE},
+								{PURPLE,600,2400,TRUE},
+								{ORANGE,600,2400,TRUE},
+								{WHITE,900,2700,TRUE},
+								{RED,900,2700,TRUE},
+								{CYAN,3335,5135,TRUE},
+								{GREEN,3335,5135,TRUE},
+								{BLUE,3635,5435,TRUE},
+								{YELLOW,3635,5435,TRUE},
+								{PURPLE,3935,5735,TRUE},
+								{ORANGE,3935,5735,TRUE},
+								{WHITE,4235,6035,TRUE},
+								{RED,4235,6035,TRUE},
+								{CYAN,6670,8470,TRUE},
+								{GREEN,6670,8470,TRUE},
+								{BLUE,6970,8770,TRUE},
+								{YELLOW,6970,8770,TRUE},
+								{PURPLE,7270,9070,TRUE},
+								{ORANGE,7270,9070,TRUE},
+								{WHITE,7570,9370,TRUE},
+								{RED,7570,9370,TRUE}
 								};
 
 LedCommandType asUserArray[200];
@@ -123,7 +116,7 @@ extern volatile u32 G_u32SystemTime1ms;                /* From board-specific so
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
 extern u32 u32Time_Counter;                            /* From main.c */
-extern u8 u8Gradient_Set;                              /* From main.c */
+extern u8 u8Gradient_Set;                              /* From user_app2.c */
 extern u8 G_au8DebugScanfBuffer[];                     /* From main.c */
 
 /***********************************************************************************************************************
@@ -142,7 +135,7 @@ Function Definitions
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /* Run led commands */
-void RunLedCommand(LedCommandType *psOutput)
+void RunLedCommand(LedCommandType *psOutput,u8 u8Time)
 {
 	static LedCommandType *psPoint;
 
@@ -174,7 +167,7 @@ void RunLedCommand(LedCommandType *psOutput)
 			{
 				if(psPoint->bGradient)//Gradient
 				{
-					if(psPoint->u8Gradient_Time++==u8Gradient_Set)
+					if(psPoint->u8Gradient_Time++==u8Time)
 					{
 						psPoint->u8Gradient_Time=0;
 						 
@@ -190,7 +183,7 @@ void RunLedCommand(LedCommandType *psOutput)
 						if(*(psPoint->peGradient)==LED_PWM_0||*(psPoint->peGradient)==LED_PWM_100)
 						{
 							psPoint->bOn=FALSE;
-							psPoint->u8Gradient_Time=u8Gradient_Set;
+							psPoint->u8Gradient_Time=u8Time;
 						}
 					}
 				}
@@ -229,7 +222,7 @@ void RunLedCommand(LedCommandType *psOutput)
 }/* Finish */
 
 /* LedCommand initialize */
-void LedCommandInitialize(LedCommandType *psOutput)
+void LedCommandInitialize(LedCommandType *psOutput,u8 u8Time)
 {
 	static LedCommandType *psPoint;
 	u32Time_Counter=0;
@@ -249,7 +242,7 @@ void LedCommandInitialize(LedCommandType *psOutput)
 			psPoint->peGradient=aeGradient;
 			psPoint->bOn=FALSE;
 			psPoint->bUp=FALSE;
-			psPoint->u8Gradient_Time=u8Gradient_Set;
+			psPoint->u8Gradient_Time=u8Time;
 			
 			if(psPoint->pNext==NULL)
 			{
@@ -263,22 +256,16 @@ void LedCommandInitialize(LedCommandType *psOutput)
 u8 PrintLedCommand(LedCommandType *psPrint)
 {
 	static bool bOn=TRUE;
-	static u8 u8Count;
+	static u8 u8Count=0;
 	static u8 u8CopyCount=0;
 	static u8 au8Print[256]=NULL;
-	static LedCommandType *psPoint;
+	static LedCommandType *psPoint=NULL;
 	
 	if(bOn)
 	{
 		bOn=FALSE;
-		u8Count=0;
 		psPoint=psPrint;
 		DebugPrintf("\n\r\n\r============     Command List     ============\n\r| Num |  LED   | TimeON | TimeOFF | Gradient |\n\r");
-		
-		for(u8 i=0;au8Print[i]!='\0';i++)
-		{
-			au8Print[i]=NULL;
-		}
 	}
 	
 	if(psPoint->pNext!=NULL)
@@ -377,7 +364,7 @@ u8 PrintLedCommand(LedCommandType *psPrint)
 		
 		strcat(au8Print,au8PrintArray);
 		
-		if(u8CopyCount==10)
+		if(u8CopyCount==15)
 		{
 			u8CopyCount=0;
 			DebugPrintf(au8Print);
@@ -393,6 +380,17 @@ u8 PrintLedCommand(LedCommandType *psPrint)
 			bOn=TRUE;
 			DebugPrintf(au8Print);
 			DebugPrintf("=================    END    ==================\n\r");
+			
+			bOn=TRUE;
+			u8Count=0;
+			u8CopyCount=0;
+			LedCommandType *psPoint=NULL;
+
+			for(u8 i=0;au8Print[i]!='\0';i++)
+			{
+				au8Print[i]=NULL;
+			}
+			
 			return 1;
 		}
 		
@@ -404,6 +402,15 @@ u8 PrintLedCommand(LedCommandType *psPrint)
 	else
 	{
 		bOn=TRUE;
+		u8Count=0;
+		u8CopyCount=0;
+		LedCommandType *psPoint=NULL;
+
+		for(u8 i=0;au8Print[i]!='\0';i++)
+		{
+			au8Print[i]=NULL;
+		}
+		
 		DebugPrintf("            The Led command is empty !         \n\r=================    END    ==================\n\r");
 		return 1;
 	}
@@ -446,7 +453,7 @@ void UserApp1Initialize(void)
 	/* Lcd */
 	LCDCommand(LCD_CLEAR_CMD);
 	LCDMessage(LINE1_START_ADDR+5,"Having Fun !");
-	LCDMessage(LINE2_START_ADDR,"DMO   USR    Mut  || ");
+	LCDMessage(LINE2_START_ADDR,"DMO   USR    LOC  || ");
 	
 	/* DemoArrary */
 	u8LengthCount_1=sizeof(asDemoArray_1)/sizeof(LedCommandType);
@@ -462,7 +469,7 @@ void UserApp1Initialize(void)
 		asDemoArray_1[i].peGradient=aeGradient;
 		asDemoArray_1[i].bOn=FALSE;
 		asDemoArray_1[i].bUp=FALSE;
-		asDemoArray_1[i].u8Gradient_Time=u8Gradient_Set;
+		asDemoArray_1[i].u8Gradient_Time=DemoGradientTime;
 	}
 	
 	for(u8 i=1;i<u8LengthCount_2;i++)
@@ -475,7 +482,7 @@ void UserApp1Initialize(void)
 		asDemoArray_2[i].peGradient=aeGradient;
 		asDemoArray_2[i].bOn=FALSE;
 		asDemoArray_2[i].bUp=FALSE;
-		asDemoArray_2[i].u8Gradient_Time=u8Gradient_Set;
+		asDemoArray_2[i].u8Gradient_Time=DemoGradientTime;
 	}
 	
 	/* UserArray */
@@ -539,68 +546,31 @@ static void UserApp1SM_Idle(void)
 {
 	/*******************************    Variables    ******************************/
 	/* In Buttons */
-	static bool bMute=FALSE;
+	static bool bLock=FALSE;
 	
 	/* In demo lists */
 	static u8 u8DemoChoose=0;
 	/***********************************   end   **********************************/
 	
 	/********************************    Buttons    *******************************/
-	if(WasButtonPressed(BUTTON0))	// Different in different user_app
+	if(WasButtonPressed(BUTTON2))
 	{
 		ButtonAcknowledge(BUTTON0);
-		u8Button_Choose=1;
-		u16LcdOnTime=0;
-		bLcdOn=TRUE;
-		
-		LedOn(LCD_RED);
-		LedOn(LCD_GREEN);
-		LedOn(LCD_BLUE);
-		
-		if(!bMute)
-		{
-			bButtonPressed=TRUE;
-			PWMAudioOn(BUZZER1);
-		}
-	}
-	
-	if(WasButtonPressed(BUTTON1))	// Different in different user_app
-	{
 		ButtonAcknowledge(BUTTON1);
-		u8Button_Choose=2;
-		u16LcdOnTime=0;
-		bLcdOn=TRUE;
-		
-		LedOn(LCD_RED);
-		LedOn(LCD_GREEN);
-		LedOn(LCD_BLUE);
-		
-		if(!bMute)
-		{
-			bButtonPressed=TRUE;
-			PWMAudioOn(BUZZER1);
-		}
-	}
-	
-	if(WasButtonPressed(BUTTON2))	// Different in different user_app
-	{
 		ButtonAcknowledge(BUTTON2);
-		u8Button_Choose=3;
+		ButtonAcknowledge(BUTTON3);
+		
 		u16LcdOnTime=0;
 		bLcdOn=TRUE;
-		bMute=!bMute;
-		
+		bLock=!bLock;
 		LedOn(LCD_RED);
 		LedOn(LCD_GREEN);
 		LedOn(LCD_BLUE);
 		
-		if(!bMute)
-		{
-			bButtonPressed=TRUE;
-			PWMAudioOn(BUZZER1);
-		}
-		
-		if(bMute)
+		bButtonPressed=TRUE;
+		PWMAudioOn(BUZZER1);
+
+		if(bLock)
 		{
 			LCDMessage(LINE2_START_ADDR+16,"<");
 		}
@@ -610,31 +580,61 @@ static void UserApp1SM_Idle(void)
 		}
 	}
 	
-	if(WasButtonPressed(BUTTON3))	// A special button used to pause and go (not fit user_app3)
+	if(!bLock)
 	{
-		ButtonAcknowledge(BUTTON3);
-		u8Button_Choose=4;
-		u16LcdOnTime=0;
-		bLcdOn=TRUE;
-		bPause=!bPause;
-		
-		LedOn(LCD_RED);
-		LedOn(LCD_GREEN);
-		LedOn(LCD_BLUE);
-		
-		if(!bMute)
+		if(WasButtonPressed(BUTTON0))
 		{
+			ButtonAcknowledge(BUTTON0);
+			u8Button_Choose=1;
+			u16LcdOnTime=0;
+			bLcdOn=TRUE;
+			
+			LedOn(LCD_RED);
+			LedOn(LCD_GREEN);
+			LedOn(LCD_BLUE);
+			
 			bButtonPressed=TRUE;
 			PWMAudioOn(BUZZER1);
 		}
 		
-		if(bPause)
+		if(WasButtonPressed(BUTTON1))
 		{
-			LCDMessage(LINE2_START_ADDR+18,"> ");
+			ButtonAcknowledge(BUTTON1);
+			u8Button_Choose=2;
+			u16LcdOnTime=0;
+			bLcdOn=TRUE;
+			
+			LedOn(LCD_RED);
+			LedOn(LCD_GREEN);
+			LedOn(LCD_BLUE);
+			
+			bButtonPressed=TRUE;
+			PWMAudioOn(BUZZER1);
 		}
-		else
+		
+		if(WasButtonPressed(BUTTON3))
 		{
-			LCDMessage(LINE2_START_ADDR+18,"||");
+			ButtonAcknowledge(BUTTON3);
+			u8Button_Choose=4;
+			u16LcdOnTime=0;
+			bLcdOn=TRUE;
+			bPause=!bPause;
+			
+			LedOn(LCD_RED);
+			LedOn(LCD_GREEN);
+			LedOn(LCD_BLUE);
+			
+			bButtonPressed=TRUE;
+			PWMAudioOn(BUZZER1);
+			
+			if(bPause)
+			{
+				LCDMessage(LINE2_START_ADDR+18,"> ");
+			}
+			else
+			{
+				LCDMessage(LINE2_START_ADDR+18,"||");
+			}
 		}
 	}
 	/**********************************    END    *********************************/
@@ -670,25 +670,25 @@ static void UserApp1SM_Idle(void)
 			
 			if(u8DemoChoose==1)
 			{
-				LedCommandInitialize(psDemoHead_1);
+				LedCommandInitialize(psDemoHead_1,DemoGradientTime);
 				LCDMessage(LINE2_START_ADDR+3,"<1");
 			}
 			
 			if(u8DemoChoose==2)
 			{
-				LedCommandInitialize(psDemoHead_2);
+				LedCommandInitialize(psDemoHead_2,DemoGradientTime);
 				LCDMessage(LINE2_START_ADDR+3,"<2");
 			}
 		}
 		
 		if(u8DemoChoose==1)
 		{
-			RunLedCommand(psDemoHead_1);
+			RunLedCommand(psDemoHead_1,DemoGradientTime);
 		}
 		
 		if(u8DemoChoose==2)
 		{
-			RunLedCommand(psDemoHead_2);
+			RunLedCommand(psDemoHead_2,DemoGradientTime);
 		}
 		/*----------------------------------    END    ----------------------------------*/
 		
@@ -702,7 +702,7 @@ static void UserApp1SM_Idle(void)
 			
 			if(bUserChoose)
 			{
-				LedCommandInitialize(psUserHead);
+				LedCommandInitialize(psUserHead,u8Gradient_Set);
 				LCDMessage(LINE2_START_ADDR+9,"<");
 			}
 			else
@@ -722,7 +722,13 @@ static void UserApp1SM_Idle(void)
 		
 		if(bUserChoose)
 		{
-			RunLedCommand(psUserHead);
+			if(bDebug_Set)
+			{
+				bDebug_Set=FALSE;
+				LedCommandInitialize(psUserHead,u8Gradient_Set);
+			}
+			
+			RunLedCommand(psUserHead,u8Gradient_Set);
 		}
 		/*----------------------------------    END    ----------------------------------*/
 	}

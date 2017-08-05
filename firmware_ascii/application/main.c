@@ -16,7 +16,6 @@ volatile u32 G_u32SystemFlags = 0;                     /* Global system flags */
 volatile u32 G_u32ApplicationFlags = 0;                /* Global applications flags: set when application is successfully initialized */
 
 u32 u32Time_Counter=0;                                 /* Time used in user_apps */
-u8 u8Gradient_Set=20;                                   /* Used in user_apps */
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* External global variables defined in other files (must indicate which file they are defined in) */
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */

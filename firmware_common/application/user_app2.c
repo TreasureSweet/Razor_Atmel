@@ -31,6 +31,7 @@ volatile u32 G_u32UserApp2Flags;                       /* Global state flags */
 pLedCommandType psNew;
 u32 u32Count=0;
 u16 u16Amount=0;
+u8 u8Gradient_Set=20;
 u8 au8MenuArray[]="\n\r\n\r\n\r************************************************\n\r*          Please choose a function            *\n\r*       1:       User define mode              *\n\r*       2:          Show lists                 *\n\r*    Press Space to return menu at any time    *\n\r************************************************\n\rChoose a function:";
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
@@ -43,13 +44,13 @@ extern volatile u32 G_u32SystemTime1ms;                /* From board-specific so
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
 extern u32 u32Time_Counter;                            /* From main.c */
-extern u8 u8Gradient_Set;                              /* From main.c */
-extern u8 u8Tera_Choose;                               /* From user_app1 */
-extern LedRateType aeGradient[];                       /* From user_app1 */
-extern pLedCommandType psUserHead;                     /* From user_app1 */
-extern pLedCommandType psUserTail;                     /* From user_app1 */
-extern pLedCommandType psDemoHead_1;                   /* From user_app1 */
-extern pLedCommandType psDemoHead_2;                   /* From user_app1 */
+extern u8 u8Tera_Choose;                               /* From user_app1.c */
+extern LedRateType aeGradient[];                       /* From user_app1.c */
+extern pLedCommandType psUserHead;                     /* From user_app1.c */
+extern pLedCommandType psUserTail;                     /* From user_app1.c */
+extern pLedCommandType psDemoHead_1;                   /* From user_app1.c */
+extern pLedCommandType psDemoHead_2;                   /* From user_app1.c */
+extern bool bDebug_Set;                       /* From user_app1.c */
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp2_" and be declared as static.
@@ -262,7 +263,7 @@ u8 LedInput()// If press space , return 1 . So use this to sign out this mode . 
 	if(u8FunctionChoose==0)
 	{
 		u8FunctionChoose=1;
-		DebugPrintf("\n\r\n\r------------    Led Input Mode    ------------\n\rFormat: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+		DebugPrintf("\n\r\n\r------------    Led Input Mode    ------------\n\rFunction : Increase a command at the end\n\rFormat: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
 		DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
 		DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------");
 	}
@@ -291,6 +292,7 @@ u8 LedInput()// If press space , return 1 . So use this to sign out this mode . 
 				for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
 				
 				u8FunctionChoose=1;
+				bDebug_Set=TRUE;
 				u16Amount++;
 			}
 			else
@@ -323,7 +325,7 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 	if(u8FunctionChoose==0)
 	{
 		u8FunctionChoose=1;
-		DebugPrintf("\n\r\n\r------------    Led Insert Mode    ------------\n\rNum: 0 ~ Max number of the list\n\rCommand: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+		DebugPrintf("\n\r\n\r------------    Led Insert Mode    ------------\n\rFunction : Insert a command after the specified command\n\rNum: 0 ~ Max number of the list\n\rCommand: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
 		DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
 		DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------");
 	}
@@ -398,6 +400,7 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 				psNew->pNext=psUserTail->pNext;
 				psUserTail->pNext=psNew;
 				u8FunctionChoose=1;
+				bDebug_Set=TRUE;
 				
 				for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
 				u16Amount++;
@@ -433,7 +436,7 @@ u8 LedAlter()
 	if(u8FunctionChoose==0)
 	{
 		u8FunctionChoose=1;
-		DebugPrintf("\n\r\n\r------------    Led Alter Mode    ------------\n\rNum: 1 ~ Max number of the list\n\rCommand: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
+		DebugPrintf("\n\r\n\r------------    Led Alter Mode    ------------\n\rFunction : Alter the specified command\n\rNum: 1 ~ Max number of the list\n\rCommand: LedColor-LedOnTime-LedOffTime-Gradient\n\r");
 		DebugPrintf("LedColor:White->w,W\n\r         PURPLE->p,P\n\r         Blue->b,B\n\r         Cyan->c,C\n\r         Green->g,G\n\r         Yellow->y,Y\n\r         Orange->o,O\n\r         Red->r,R\n\r");
 		DebugPrintf("LedOntime and LedOffTime : 0~9999 (ms)\n\rGradient:y,Y or n,N\n\r         Y:use the effect of gradient\n\r         N:not use the effect of gradient\n\rFor example: r-500-4000-y  G-2000-3000-N\n\r------------          END         ------------");
 	}
@@ -510,6 +513,7 @@ u8 LedAlter()
 				psUserTail->u32LedOff=psNew->u32LedOff;
 				psUserTail->bGradient=psNew->bGradient;
 				u8FunctionChoose=1;
+				bDebug_Set=TRUE;
 				
 				for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
 			}
@@ -545,7 +549,7 @@ u8 LedDelete()
 	if(u8FunctionChoose==0)
 	{
 		u8FunctionChoose=1;
-		DebugPrintf("\n\r\n\r------------    Led Delete Mode    -----------\n\rNum: 1 ~ Max number of the list\n\r------------          END         ------------");
+		DebugPrintf("\n\r\n\r------------    Led Delete Mode    -----------\n\rFunction : Delete the specified command\n\rNum: 1 ~ Max number of the list\n\r------------          END         ------------");
 	}
 	
 	if(u8FunctionChoose==1)
@@ -609,12 +613,91 @@ u8 LedDelete()
 	if(u8FunctionChoose==3)
 	{
 		u8FunctionChoose=1;
+		bDebug_Set=TRUE;
 		psPoint=psUserTail->pNext;
 		psUserTail->pNext=psPoint->pNext;
 		psPoint=NULL;
 		
 		for(;psUserTail->pNext!=NULL;psUserTail=psUserTail->pNext);
 		u16Amount--;
+	}
+	
+	if(G_u8DebugScanfCharCount>0)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]==' ')
+		{
+			DebugScanf(au8Input);
+			u8FunctionChoose=0;
+			return 1;
+		}
+	}
+	
+	return 0;
+}/* Finish */
+
+/* LedGradient */
+u8 LedGradient()
+{
+	static u8 u8FunctionChoose=0;
+	u8 u32CommandNum=0;
+	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
+	
+	if(u8FunctionChoose==0)
+	{
+		u8FunctionChoose=1;
+		DebugPrintf("\n\r\n\r----------    Led Set Gradient Mode   ---------\n\rFunction : Set the speed of led gradient\n\rGradient Speed: 10 ~ 200\n\rWarning : It needs nearly 20*(Gradient Speed)(ms)\n\rafter the On time or the Off time,\n\ror it will be not so effective\n\r------------          END         ------------");
+	}
+	
+	if(u8FunctionChoose==1)
+	{
+		u8FunctionChoose=2;
+		DebugPrintf("\n\r\n\rGradient Speed: ");
+		DebugPrintNumber(u8Gradient_Set);
+		DebugPrintf("ms\n\rNew Gradient Speed:");
+	}
+	
+	if(u8FunctionChoose==2)
+	{
+		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
+		{
+			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
+			DebugScanf(au8Input);
+			
+			for(u8 i=0;;i++)
+			{
+				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				{
+					if(au8Input[i]!='\b')
+					{
+						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
+					}
+					else
+					{
+						u32CommandNum/=10;
+					}
+				}
+				else if(au8Input[i]=='\0')
+				{
+					if(u32CommandNum>=10&&u32CommandNum<=200)
+					{
+						u8FunctionChoose=1;
+						bDebug_Set=TRUE;
+						u8Gradient_Set=u32CommandNum;
+					}
+					else
+					{
+						DebugPrintf("\n\r\n\rInvalid Command!\n\rNew Gradient Speed:");
+					}
+					
+					break;
+				}
+				else
+				{
+					DebugPrintf("\n\r\n\rInvalid Command!\n\rNew Gradient Speed:");
+					break;
+				}
+			}
+		}
 	}
 	
 	if(G_u8DebugScanfCharCount>0)
@@ -713,7 +796,7 @@ static void UserApp2SM_Idle(void)
 			{
 				case '1':
 					u8Tera_Choose=1;	// Goto User define mode
-					DebugPrintf("\n\r\n\r============   User define mode   ============\n\r\n\r1:              Led Input Mode\n\r2:              Led Insert Mode\n\r3:              Led Alter Mode\n\r4:              Led Delete Mode\n\r\n\r=============        END        ==============\n\rChoose a mode:");
+					DebugPrintf("\n\r\n\r============   User define mode   ============\n\r\n\r1:              Led Input Mode\n\r2:              Led Insert Mode\n\r3:              Led Alter Mode\n\r4:              Led Delete Mode\n\r5:              Led Set Gradient Mode\n\r\n\r=============        END        ==============\n\rChoose a mode:");
 					break;
 					
 				case '2':
@@ -755,8 +838,7 @@ static void UserApp2SM_Idle(void)
 					break;
 					
 				case '5':
-					u8Tera_Choose=7;
-					DebugPrintf("\n\r\n\r-------------   Led Set Gradient   -----------\n\r");
+					u8Tera_Choose=7;	// Goto Set Gradient Mode
 					break;
 					
 				case ' ':
@@ -811,6 +893,11 @@ static void UserApp2SM_Idle(void)
 	
 	if(u8Tera_Choose==7)// Led Set Gradient
 	{	
+		if(LedGradient())
+		{
+			u8Tera_Choose=0;
+			DebugPrintf(au8MenuArray);
+		}
 	}
 	/*--------------------------------    end    ---------------------------------*/
 	
