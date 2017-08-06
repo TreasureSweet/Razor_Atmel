@@ -85,13 +85,19 @@ u8 LedCheck(u8 *pu8Array)
 	{
 		if(*pu8Array!='\b')
 		{
-			*pu8Point=*pu8Array;
-			pu8Point++;
+			if(*pu8Array!='\r')
+			{
+				*pu8Point=*pu8Array;
+				pu8Point++;
+			}
 		}
 		else
 		{
-			*(pu8Point-1)=NULL;
-			pu8Point--;
+			if(pu8Point!=au8Array)
+			{
+				pu8Point--;
+				*pu8Point=NULL;
+			}
 		}
 	}
 	
@@ -281,7 +287,6 @@ u8 LedInput()// If press space , return 1 . So use this to sign out this mode . 
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			if(LedCheck(au8Input))
@@ -343,7 +348,6 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			for(u8 i=0;;i++)
@@ -359,7 +363,7 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 						u32CommandNum/=10;
 					}
 				}
-				else if(au8Input[i]=='\0')
+				else if(au8Input[i]=='\r')
 				{
 					if(u32CommandNum<=u16Amount)
 					{
@@ -392,7 +396,6 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			if(LedCheck(au8Input))
@@ -454,7 +457,6 @@ u8 LedAlter()
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			for(u8 i=0;;i++)
@@ -470,7 +472,7 @@ u8 LedAlter()
 						u32CommandNum/=10;
 					}
 				}
-				else if(au8Input[i]=='\0')
+				else if(au8Input[i]=='\r')
 				{
 					if(u32CommandNum>0&&u32CommandNum<=u16Amount)
 					{
@@ -503,7 +505,6 @@ u8 LedAlter()
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			if(LedCheck(au8Input))
@@ -565,7 +566,6 @@ u8 LedDelete()
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			for(u8 i=0;;i++)
@@ -581,7 +581,7 @@ u8 LedDelete()
 						u32CommandNum/=10;
 					}
 				}
-				else if(au8Input[i]=='\0')
+				else if(au8Input[i]=='\r')
 				{
 					if(u32CommandNum>0&&u32CommandNum<=u16Amount)
 					{
@@ -660,7 +660,6 @@ u8 LedGradient()
 	{
 		if(G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]=='\r')
 		{
-			G_au8DebugScanfBuffer[G_u8DebugScanfCharCount-1]='\0';
 			DebugScanf(au8Input);
 			
 			for(u8 i=0;;i++)
@@ -676,7 +675,7 @@ u8 LedGradient()
 						u32CommandNum/=10;
 					}
 				}
-				else if(au8Input[i]=='\0')
+				else if(au8Input[i]=='\r')
 				{
 					if(u32CommandNum>=10&&u32CommandNum<=200)
 					{
