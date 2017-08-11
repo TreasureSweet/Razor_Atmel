@@ -126,11 +126,14 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp3SM_Idle(void)
 {
-	static u8 u8ButtonTime=0;
-	static u16 u16ClearLcdTime=0;
-	static bool bOn=FALSE;
+	/*****************************    Variables    ********************************/
+	static u8 u8ButtonTime=0;       // If button is pressed, it start count
+	static u16 u16ClearLcdTime=0;   // If button1 is pressed and User List is empty, it start count
+	static bool bOn=FALSE;  // Because the prompt of button1 has been pressed need to be cleared immediately. But the prompt of empty list should be cleared after a period of time. So use this to separate them.
+	/*********************************   end   ************************************/
 	
-	if(bEmpty)
+	/*************************        Delay mode        ****************************/
+	if(bEmpty)  // Clear prompt '<' of Button1 immediately
 	{
 		bEmpty=FALSE;
 		bUserChoose=FALSE;
@@ -139,7 +142,7 @@ static void UserApp3SM_Idle(void)
 		u16ClearLcdTime=0;
 	}
 	
-	if(bOn)
+	if(bOn)     // Clear prompt 'Command empty !' of Button1 after 2s
 	{
 		if(u16ClearLcdTime++==2000)
 		{
@@ -150,7 +153,7 @@ static void UserApp3SM_Idle(void)
 		}
 	}
 	
-	if(bLcdOn)
+	if(bLcdOn)  // Turn Lcd off after 5s
 	{
 		if(u16LcdOnTime++==5000)
 		{
@@ -162,7 +165,7 @@ static void UserApp3SM_Idle(void)
 		}
 	}
 	
-	if(bButtonPressed)
+	if(bButtonPressed)  // Turn buzzer off after 0.2s
 	{
 		if(u8ButtonTime++==200)
 		{
@@ -171,6 +174,7 @@ static void UserApp3SM_Idle(void)
 			PWMAudioOff(BUZZER1);
 		}
 	}
+	/**********************************   end   ************************************/
 } /* end UserApp3SM_Idle() */
      
 #if 0

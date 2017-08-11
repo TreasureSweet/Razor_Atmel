@@ -43,26 +43,28 @@ All Global variable names shall start with "G_UserApp1"
 /* New variables */
 volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
 
-u8 u8Button_Choose=0;
-u8 u8Tera_Choose=0;
-u8 u8LengthCount_1;
-u8 u8LengthCount_2;
-u16 u16LcdOnTime=0;
-bool bPause=FALSE;
-bool bButtonPressed=FALSE;
-bool bEmpty=FALSE;
-bool bUserChoose=FALSE;
-bool bLcdOn=TRUE;
-bool bDebug_Set=FALSE;
-pLedCommandType psDemoHead_1;
-pLedCommandType psDemoHead_2;
-pLedCommandType psUserHead;
-pLedCommandType psUserTail;
+u8 u8Button_Choose=0;       // Change when button pressed
+u8 u8Tera_Choose=0;         // Change when debug choose a function
+u8 u8LengthCount_1;         // Length of Demo List 1
+u8 u8LengthCount_2;         // Length of Demo List 2
+u16 u16LcdOnTime=0;         // Used to turn lcd off after timeset in user_app3.c ( Time )
+bool bLcdOn=TRUE;           // Used to turn lcd off after timeset in user_app3.c ( Check )
+bool bPause=FALSE;          // Button3 press to change it and then pause the functions
+bool bButtonPressed=FALSE;  // Used to turn Buzzer off after timeset in user_app3.c
+bool bEmpty=FALSE;          // Used to show warning on lcd when button1 is pressed but demo list is empty
+bool bUserChoose=FALSE;     // Run demo list or not
+bool bDebug_Set=FALSE;      // Every time debug input a command to user list, the bool will be ture and then initialize the runcommand app
+pLedCommandType psDemoHead_1;         // The head of Demo List 1
+pLedCommandType psDemoHead_2;         // The head of Demo List 2
+pLedCommandType psUserHead;           // The head of User List
+pLedCommandType psUserTail;           // The Tail of User List
+
 LedRateType aeGradient[]={LED_PWM_0,LED_PWM_5,LED_PWM_10,LED_PWM_15,LED_PWM_20, 
 							LED_PWM_25,LED_PWM_30,LED_PWM_35,LED_PWM_40,LED_PWM_45, 
 							LED_PWM_50,LED_PWM_55,LED_PWM_60,LED_PWM_65,LED_PWM_70, 
 							LED_PWM_75, LED_PWM_80,LED_PWM_85, LED_PWM_90,LED_PWM_95, 
-							LED_PWM_100};
+							LED_PWM_100};    // This array is used to add gradient to led
+
 LedCommandType asDemoArray_1[]={{WHITE,0,1900,TRUE},
 								{PURPLE,400,2300,TRUE},
 								{BLUE,800,2700,TRUE},
@@ -79,7 +81,8 @@ LedCommandType asDemoArray_1[]={{WHITE,0,1900,TRUE},
 								{BLUE,7000,8900,TRUE},
 								{PURPLE,7400,9300,TRUE},
 								{WHITE,7800,9700,TRUE}
-								};
+								};                       // Demo List 1
+
 LedCommandType asDemoArray_2[]={{CYAN,0,1800,TRUE},
 								{GREEN,0,1800,TRUE},
 								{BLUE,300,2100,TRUE},
@@ -104,9 +107,8 @@ LedCommandType asDemoArray_2[]={{CYAN,0,1800,TRUE},
 								{ORANGE,7270,9070,TRUE},
 								{WHITE,7570,9370,TRUE},
 								{RED,7570,9370,TRUE}
-								};
+								};                       // Demo List 2
 
-LedCommandType asUserArray[200];
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 extern volatile u32 G_u32SystemFlags;                  /* From main.c */
@@ -134,7 +136,7 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
-/* Run led commands */
+/* Run led commands ( Format in (): The head of a list, gradient time) */
 void RunLedCommand(LedCommandType *psOutput,u8 u8Time)
 {
 	static LedCommandType *psPoint;
@@ -165,7 +167,7 @@ void RunLedCommand(LedCommandType *psOutput,u8 u8Time)
 		{
 			if(psPoint->bOn)
 			{
-				if(psPoint->bGradient)//Gradient
+				if(psPoint->bGradient)	// Gradient
 				{
 					if(psPoint->u8Gradient_Time++==u8Time)
 					{
@@ -188,7 +190,7 @@ void RunLedCommand(LedCommandType *psOutput,u8 u8Time)
 					}
 				}
 
-				if(!psPoint->bGradient)//No gradient
+				if(!psPoint->bGradient)	// No gradient
 				{
 					psPoint->bOn=FALSE;
 					
@@ -209,7 +211,7 @@ void RunLedCommand(LedCommandType *psOutput,u8 u8Time)
 			}
 		}
 	}
-	else
+	else	// The command list is empty
 	{
 		if(!bEmpty)
 		{
@@ -221,7 +223,7 @@ void RunLedCommand(LedCommandType *psOutput,u8 u8Time)
 	}
 }/* Finish */
 
-/* LedCommand initialize */
+/* LedCommand initialize ( Format in (): The head of a list, gradient time) */
 void LedCommandInitialize(LedCommandType *psOutput,u8 u8Time)
 {
 	static LedCommandType *psPoint;
@@ -252,7 +254,7 @@ void LedCommandInitialize(LedCommandType *psOutput,u8 u8Time)
 	}
 }/* Finish */
 
-/* LedCommand print */
+/* LedCommand print. If print finish, return 1. If print not finish, return 0. ( Format in (): The head of a list) */
 u8 PrintLedCommand(LedCommandType *psPrint)
 {
 	static bool bOn=TRUE;
@@ -435,6 +437,7 @@ Promises:
 void UserApp1Initialize(void)
 {
 	DebugSetPassthrough();
+	
 	/****************************    Initializations    ***************************/
 	/* Led */
 	LedOff(WHITE);
@@ -485,16 +488,16 @@ void UserApp1Initialize(void)
 		asDemoArray_2[i].u8Gradient_Time=DemoGradientTime;
 	}
 	
-	/* UserArray */
-	psUserHead=(pLedCommandType)malloc(sizeof(LedCommandType));
-	psUserTail=psUserHead;
-	psUserTail->pNext=NULL;
-	
-	/* DemoArray */
 	psDemoHead_1=(pLedCommandType)malloc(sizeof(LedCommandType));
 	psDemoHead_2=(pLedCommandType)malloc(sizeof(LedCommandType));
 	psDemoHead_1->pNext=asDemoArray_1;
 	psDemoHead_2->pNext=asDemoArray_2;
+	
+	/* UserArray */
+	psUserHead=(pLedCommandType)malloc(sizeof(LedCommandType));
+	psUserTail=psUserHead;
+	psUserTail->pNext=NULL;
+
 	/**********************************    END    *********************************/
 	
   /* If good initialization, set state to Idle */
@@ -553,7 +556,7 @@ static void UserApp1SM_Idle(void)
 	/***********************************   end   **********************************/
 	
 	/********************************    Buttons    *******************************/
-	if(WasButtonPressed(BUTTON2))
+	if(WasButtonPressed(BUTTON2))  // Function: If bLock == TRUE, the function in bLock will be invalid.
 	{
 		ButtonAcknowledge(BUTTON0);
 		ButtonAcknowledge(BUTTON1);
@@ -580,9 +583,9 @@ static void UserApp1SM_Idle(void)
 		}
 	}
 	
-	if(!bLock)
+	if(!bLock)  // Every need to be locked should be written in this if.
 	{
-		if(WasButtonPressed(BUTTON0))
+		if(WasButtonPressed(BUTTON0))  // Function: Show Demo Lists.
 		{
 			ButtonAcknowledge(BUTTON0);
 			u8Button_Choose=1;
@@ -597,7 +600,7 @@ static void UserApp1SM_Idle(void)
 			PWMAudioOn(BUZZER1);
 		}
 		
-		if(WasButtonPressed(BUTTON1))
+		if(WasButtonPressed(BUTTON1))  // Function: Show User List.
 		{
 			ButtonAcknowledge(BUTTON1);
 			u8Button_Choose=2;
@@ -612,7 +615,7 @@ static void UserApp1SM_Idle(void)
 			PWMAudioOn(BUZZER1);
 		}
 		
-		if(WasButtonPressed(BUTTON3))
+		if(WasButtonPressed(BUTTON3)) // Function: If bPause == TRUE, the function in bPause will be paused.
 		{
 			ButtonAcknowledge(BUTTON3);
 			u8Button_Choose=4;
@@ -640,7 +643,7 @@ static void UserApp1SM_Idle(void)
 	/**********************************    END    *********************************/
 	
 	/**********************************    Pause    *********************************/
-	if(!bPause)
+	if(!bPause)// Every need to be paused should be written in this if.
 	{
 		/*----------------------------------    Demo    ----------------------------------*/
 		if(u8Button_Choose==1)

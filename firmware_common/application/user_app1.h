@@ -25,21 +25,22 @@ Type Definitions
 **********************************************************************************************************************/
 typedef struct
 {
-	LedNumberType eLedNum;
-	u32 u32LedOn;
-	u32 u32LedOff;
-	bool bGradient;
-	void *pNext;
-	LedRateType *peGradient;
-	bool bOn;
-	bool bUp;
-	u8 u8Gradient_Time;
+	LedNumberType eLedNum; // Choose a led
+	u32 u32LedOn;          // The time turn on led
+	u32 u32LedOff;         // The time turn off led
+	bool bGradient;        // If the led need gradient
+	void *pNext;           // Point to the next struct
+	LedRateType *peGradient;  // Point to PWM array to realize gradient
+	bool bOn;                 // Turn TRUE when arrive u32LedOn or u32LedOff
+	bool bUp;                 // Gradient up or down ( up: TRUE, down: FALSE )
+	u8 u8Gradient_Time;       // Used to set gradient speed
 }LedCommandType,*pLedCommandType;
 
 /**********************************************************************************************************************
 Constants / Definitions
 **********************************************************************************************************************/
-#define DemoGradientTime (u8)20
+#define DemoGradientTime (u8)20 // Gradient speed of demo lists
+
 /**********************************************************************************************************************
 Function Declarations
 **********************************************************************************************************************/

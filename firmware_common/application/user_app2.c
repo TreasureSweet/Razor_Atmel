@@ -28,11 +28,15 @@ All Global variable names shall start with "G_UserApp2"
 ***********************************************************************************************************************/
 /* New variables */
 volatile u32 G_u32UserApp2Flags;                       /* Global state flags */
-pLedCommandType psNew;
-u32 u32Count=0;
-u16 u16Amount=0;
-u8 u8Gradient_Set=20;
+
+pLedCommandType psNew;    // A struct to storage data temporarily
+u16 u16Amount=0;          // The number of the commands in user list
+u8 u8Gradient_Set=20;     // Gradient speed. User can change this in debug
+u32 u32NumCheck_Ok=0;     // Check format of number input in debug, if right, this element is the number.
+
 u8 au8MenuArray[]="\n\r\n\r\n\r************************************************\n\r*          Please choose a function            *\n\r*       1:       User define mode              *\n\r*       2:          Show lists                 *\n\r*    Press Space to return menu at any time    *\n\r************************************************\n\rChoose a function:";
+// This array is the debug menu.
+
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 extern volatile u32 G_u32SystemFlags;                  /* From main.c */
@@ -72,6 +76,7 @@ u8 LedCheck(u8 *pu8Array)
 	bool bCheckOn=FALSE;
 	u8 au8Array[256]=NULL;
 	u8 *pu8Point=au8Array;
+	u8 *pu8Tail=pu8Point;
 	psNew=(pLedCommandType)malloc(sizeof(LedCommandType));
 	
 	/* Temporary data */
@@ -80,28 +85,72 @@ u8 LedCheck(u8 *pu8Array)
 	u32 u32LedOffTem=0;
 	bool bGradientTem=FALSE;
 	
-	/* Delete '\b' */
+	/* Special keys */
 	for(;*pu8Array!='\0';pu8Array++)
 	{
-		if(*pu8Array!='\b')
+		switch(*pu8Array)
 		{
-			if(*pu8Array!='\r')
-			{
+			case '\b':	// Backspace Key
+				if(pu8Point!=au8Array)
+				{
+					if(pu8Point==pu8Tail)
+					{
+						pu8Tail--;
+					}
+					
+					pu8Point--;
+					*pu8Point=NULL;
+				}
+				break;
+				
+			case '\r':	// Enter Key
+				break;
+				
+			case '\x1B':	// Find a key maybe a Direct Key
+				if((*(pu8Array+1)=='\x5B'))
+				{
+					switch(*(pu8Array+2))
+					{
+						case '\x44':	// Left Key
+							if(pu8Point!=au8Array)
+							{
+								pu8Point--;
+							}
+							
+							pu8Array+=2;
+							break;
+							
+						case '\x43':	// Right Key
+							if(pu8Point!=pu8Tail)
+							{
+								pu8Point++;
+							}
+							
+							pu8Array+=2;
+							break;
+							
+						case '\x41':	// Up Key
+						case '\x42':	// Down Key
+							pu8Array+=2;
+							break;
+						
+						default :
+							break;
+					}
+				}
+				break;
+				
+			default :	// Data Keys
 				*pu8Point=*pu8Array;
 				pu8Point++;
-			}
-		}
-		else
-		{
-			if(pu8Point!=au8Array)
-			{
-				pu8Point--;
-				*pu8Point=NULL;
-			}
+				pu8Tail++;
+				break;
 		}
 	}
 	
+	pu8Tail=NULL; 
 	pu8Point=au8Array;
+	
 	/* Check */
 	if(*(pu8Point+1)=='-')
 	{
@@ -258,7 +307,99 @@ u8 LedCheck(u8 *pu8Array)
 	{
 		return 0;
 	}
+	/* End */
 }/* Finish */
+
+/* NumCheck return 1:Format true and then can use u32NumCheck_Ok; renturn 0:Format false */
+bool NumCheck(u8 *pu8NumArray)
+{
+	u8 au8Array[256]=NULL;
+	u8 *pu8Point=au8Array;
+	u8 *pu8Tail=pu8Point;
+	
+	/* Special keys */
+	for(;*pu8NumArray!='\0';pu8NumArray++)
+	{
+		switch(*pu8NumArray)
+		{
+			case '\b':	// Backspace Key
+				if(pu8Point!=au8Array)
+				{
+					if(pu8Point==pu8Tail)
+					{
+						pu8Tail--;
+					}
+					
+					pu8Point--;
+					*pu8Point=NULL;
+				}
+				break;
+				
+			case '\r':	// Enter Key
+				break;
+				
+			case '\x1B':	// Find a key maybe a Direct Key
+				if((*(pu8NumArray+1)=='\x5B'))
+				{
+					switch(*(pu8NumArray+2))
+					{
+						case '\x44':	// Left Key
+							if(pu8Point!=au8Array)
+							{
+								pu8Point--;
+							}
+							
+							pu8NumArray+=2;
+							break;
+							
+						case '\x43':	// Right Key
+							if(pu8Point!=pu8Tail)
+							{
+								pu8Point++;
+							}
+							
+							pu8NumArray+=2;
+							break;
+							
+						case '\x41':	// Up Key
+						case '\x42':	// Down Key
+							pu8NumArray+=2;
+							break;
+						
+						default :
+							break;
+					}
+				}
+				break;
+				
+			default :	// Data Keys
+				*pu8Point=*pu8NumArray;
+				pu8Point++;
+				pu8Tail++;
+				break;
+		}
+	}
+	
+	pu8Tail=NULL; 
+	pu8Point=au8Array;
+	
+	/* Check */
+	for(u32NumCheck_Ok=0;*pu8Point!='\0';pu8Point++)
+	{
+		if(*pu8Point>='0'&&*pu8Point<='9')
+		{
+			u32NumCheck_Ok=10*u32NumCheck_Ok+(*pu8Point-48);
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+	
+	return TRUE;
+	/* End */
+}
+/* Finish */
 
 /* LedInput */
 u8 LedInput()// If press space , return 1 . So use this to sign out this mode . Mode function : Add commands at the end of the list . Need to input one element.
@@ -324,7 +465,6 @@ u8 LedInput()// If press space , return 1 . So use this to sign out this mode . 
 u8 LedInsert()// If press space , return 1 . So use this to sign out this mode . Mode function : Insert commands at the anywhere . Need to input 2 elements.
 {
 	static u8 u8FunctionChoose=0;
-	u32 u32CommandNum=0;
 	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
 	
 	if(u8FunctionChoose==0)
@@ -350,44 +490,27 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 		{
 			DebugScanf(au8Input);
 			
-			for(u8 i=0;;i++)
+			if(NumCheck(au8Input))
 			{
-				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				if(u32NumCheck_Ok<=u16Amount)
 				{
-					if(au8Input[i]!='\b')
-					{
-						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
-					}
-					else
-					{
-						u32CommandNum/=10;
-					}
-				}
-				else if(au8Input[i]=='\r')
-				{
-					if(u32CommandNum<=u16Amount)
-					{
-						u8FunctionChoose=3;
-						psUserTail=psUserHead;
-						DebugPrintf("\n\rInput a command:");
-						
-						for(;u32CommandNum>0;u32CommandNum--)
-						{
-							psUserTail=psUserTail->pNext;
-						}
-					}
-					else
-					{
-						DebugPrintf("\n\r\n\rInvalid Command!\n\rInsert after which command ?\n\rInput a Num:");
-					}
+					u8FunctionChoose=3;
+					psUserTail=psUserHead;
+					DebugPrintf("\n\rInput a command:");
 					
-					break;
+					for(;u32NumCheck_Ok>0;u32NumCheck_Ok--)
+					{
+						psUserTail=psUserTail->pNext;
+					}
 				}
 				else
 				{
 					DebugPrintf("\n\r\n\rInvalid Command!\n\rInsert after which command ?\n\rInput a Num:");
-					break;
 				}
+			}
+			else
+			{
+				DebugPrintf("\n\r\n\rInvalid Command!\n\rInsert after which command ?\n\rInput a Num:");
 			}
 		}
 	}
@@ -433,7 +556,6 @@ u8 LedInsert()// If press space , return 1 . So use this to sign out this mode .
 u8 LedAlter()
 {
 	static u8 u8FunctionChoose=0;
-	u32 u32CommandNum=0;
 	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
 	
 	if(u8FunctionChoose==0)
@@ -459,44 +581,27 @@ u8 LedAlter()
 		{
 			DebugScanf(au8Input);
 			
-			for(u8 i=0;;i++)
+			if(NumCheck(au8Input))
 			{
-				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				if(u32NumCheck_Ok>0&&u32NumCheck_Ok<=u16Amount)
 				{
-					if(au8Input[i]!='\b')
+					u8FunctionChoose=3;
+					psUserTail=psUserHead;
+					DebugPrintf("\n\rInput a command:");
+
+					for(;u32NumCheck_Ok>0;u32NumCheck_Ok--)
 					{
-						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
+						psUserTail=psUserTail->pNext;
 					}
-					else
-					{
-						u32CommandNum/=10;
-					}
-				}
-				else if(au8Input[i]=='\r')
-				{
-					if(u32CommandNum>0&&u32CommandNum<=u16Amount)
-					{
-						u8FunctionChoose=3;
-						psUserTail=psUserHead;
-						DebugPrintf("\n\rInput a command:");
-						
-						for(;u32CommandNum>0;u32CommandNum--)
-						{
-							psUserTail=psUserTail->pNext;
-						}
-					}
-					else
-					{
-						DebugPrintf("\n\r\n\rInvalid Command!\n\rAlter which command ?\n\rInput a Num:");
-					}
-					
-					break;
 				}
 				else
 				{
 					DebugPrintf("\n\r\n\rInvalid Command!\n\rAlter which command ?\n\rInput a Num:");
-					break;
 				}
+			}
+			else
+			{
+				DebugPrintf("\n\r\n\rInvalid Command!\n\rAlter which command ?\n\rInput a Num:");
 			}
 		}
 	}
@@ -544,7 +649,6 @@ u8 LedDelete()
 {
 	static u8 u8FunctionChoose=0;
 	pLedCommandType psPoint=NULL;
-	u32 u32CommandNum=0;
 	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
 	
 	if(u8FunctionChoose==0)
@@ -568,44 +672,27 @@ u8 LedDelete()
 		{
 			DebugScanf(au8Input);
 			
-			for(u8 i=0;;i++)
+			if(NumCheck(au8Input))
 			{
-				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				if(u32NumCheck_Ok>0&&u32NumCheck_Ok<=u16Amount)
 				{
-					if(au8Input[i]!='\b')
-					{
-						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
-					}
-					else
-					{
-						u32CommandNum/=10;
-					}
-				}
-				else if(au8Input[i]=='\r')
-				{
-					if(u32CommandNum>0&&u32CommandNum<=u16Amount)
-					{
-						u8FunctionChoose=3;
-						psUserTail=psUserHead;
-						DebugPrintf("\n\rInput a command:");
-						
-						for(u32CommandNum--;u32CommandNum>0;u32CommandNum--)
-						{
-							psUserTail=psUserTail->pNext;
-						}
-					}
-					else
-					{
-						DebugPrintf("\n\r\n\rInvalid Command!\n\rDelete which command ?\n\rInput a Num:");
-					}
+					u8FunctionChoose=3;
+					psUserTail=psUserHead;
+					DebugPrintf("\n\rInput a command:");
 					
-					break;
+					for(u32NumCheck_Ok--;u32NumCheck_Ok>0;u32NumCheck_Ok--)
+					{
+						psUserTail=psUserTail->pNext;
+					}
 				}
 				else
 				{
 					DebugPrintf("\n\r\n\rInvalid Command!\n\rDelete which command ?\n\rInput a Num:");
-					break;
 				}
+			}
+			else
+			{
+				DebugPrintf("\n\r\n\rInvalid Command!\n\rDelete which command ?\n\rInput a Num:");
 			}
 		}
 	}
@@ -639,7 +726,6 @@ u8 LedDelete()
 u8 LedGradient()
 {
 	static u8 u8FunctionChoose=0;
-	u8 u32CommandNum=0;
 	u8 au8Input[256]=NULL;   // An array to save commands inputed by keyboard
 	
 	if(u8FunctionChoose==0)
@@ -662,39 +748,23 @@ u8 LedGradient()
 		{
 			DebugScanf(au8Input);
 			
-			for(u8 i=0;;i++)
+			if(NumCheck(au8Input))
 			{
-				if((au8Input[i]>='0'&&au8Input[i]<='9')||au8Input[i]=='\b')
+				if(u32NumCheck_Ok>=10&&u32NumCheck_Ok<=200)
 				{
-					if(au8Input[i]!='\b')
-					{
-						u32CommandNum=10*u32CommandNum+(au8Input[i]-48);
-					}
-					else
-					{
-						u32CommandNum/=10;
-					}
-				}
-				else if(au8Input[i]=='\r')
-				{
-					if(u32CommandNum>=10&&u32CommandNum<=200)
-					{
-						u8FunctionChoose=1;
-						bDebug_Set=TRUE;
-						u8Gradient_Set=u32CommandNum;
-					}
-					else
-					{
-						DebugPrintf("\n\r\n\rInvalid Command!\n\rNew Gradient Speed:");
-					}
-					
-					break;
+					u8FunctionChoose=1;
+					bDebug_Set=TRUE;
+					u8Gradient_Set=u32NumCheck_Ok;
+					u32NumCheck_Ok=0;
 				}
 				else
 				{
 					DebugPrintf("\n\r\n\rInvalid Command!\n\rNew Gradient Speed:");
-					break;
 				}
+			}
+			else
+			{
+				DebugPrintf("\n\r\n\rInvalid Command!\n\rNew Gradient Speed:");
 			}
 		}
 	}
@@ -786,7 +856,7 @@ static void UserApp2SM_Idle(void)
 	/*********************************   end   ************************************/
 
 	/*******************************    Debug    **********************************/
-	/*-------------------------   Function Choose   ------------------------------*/
+	/*--------------------      Menu ( Function Choose )      -------------------------*/
 	if(u8Tera_Choose==0)
 	{
 		if(DebugScanf(au8Scanf))
@@ -803,7 +873,7 @@ static void UserApp2SM_Idle(void)
 					DebugPrintf("\n\r\n\r===============   Show lists   ===============\n\r\n\r1:                Demo_List_1\n\r2:                Demo_List_2\n\r3:                User_List\n\r\n\r=============        END        ==============\n\rChoose a list:");
 					break;
 					
-				default :
+				default :               // Invalid command
 					DebugPrintf("\n\r\n\rInvalid Command!(You should input 1 or 2)\n\rChoose a function:");
 					break;
 			}
@@ -840,12 +910,12 @@ static void UserApp2SM_Idle(void)
 					u8Tera_Choose=7;	// Goto Set Gradient Mode
 					break;
 					
-				case ' ':
+				case ' ':               // Return to menu
 					u8Tera_Choose=0;
 					DebugPrintf(au8MenuArray);
 					break;
 					
-				default :
+				default :               // Invalid command
 					DebugPrintf("\n\r\n\rInvalid command ! (You should input 1,2,3 or 4)\n\rChoose a Mode:");
 					break;
 			}
@@ -907,24 +977,24 @@ static void UserApp2SM_Idle(void)
 		{
 			switch(au8Scanf[0])
 			{
-				case '1':
+				case '1':                // Goto Show Demo List 1
 					u8Tera_Choose=8;
 					break;
 					
-				case '2':
+				case '2':                // Goto Show Demo List 2
 					u8Tera_Choose=9;
 					break;
 					
-				case '3':
+				case '3':                // Goto Show User List
 					u8Tera_Choose=10;
 					break;
 					
-				case ' ':
+				case ' ':                // Return to menu
 					u8Tera_Choose=0;
 					DebugPrintf(au8MenuArray);
 					break;
 					
-				default :
+				default :                // Invalid command
 					DebugPrintf("\n\r\n\rInvalid command ! (You should input 1,2 or 3)\n\rChoose a List:");
 					break;
 			}
@@ -933,7 +1003,7 @@ static void UserApp2SM_Idle(void)
 		}
 	}
 	
-	if(u8Tera_Choose==8)// Demo List_1
+	if(u8Tera_Choose==8)// Show Demo List 1
 	{
 		if(PrintLedCommand(psDemoHead_1))
 		{
@@ -942,7 +1012,7 @@ static void UserApp2SM_Idle(void)
 		}
 	}
 	
-	if(u8Tera_Choose==9)// Demo List_2
+	if(u8Tera_Choose==9)// Show Demo List 2
 	{
 		if(PrintLedCommand(psDemoHead_2))
 		{
@@ -951,7 +1021,7 @@ static void UserApp2SM_Idle(void)
 		}
 	}
 	
-	if(u8Tera_Choose==10)// User List
+	if(u8Tera_Choose==10)// Show User List
 	{
 		if(PrintLedCommand(psUserHead))
 		{
