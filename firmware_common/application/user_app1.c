@@ -43,6 +43,7 @@ All Global variable names shall start with "G_UserApp1"
 /* New variables */
 volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
 
+bool bState = TRUE;	// A value used to choose a module
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
@@ -87,7 +88,30 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 
+	/* Buzzer initialize */
+	PWMAudioSetFrequency(BUZZER1,200);
+	PWMAudioOff(BUZZER1);
+
+	/* Led initialize */
+	LedOn(WHITE);
+	LedOn(PURPLE);
+	LedOn(BLUE);
+	LedOn(CYAN);
+	LedOff(GREEN);
+	LedOff(YELLOW);
+	LedOff(ORANGE);
+	LedOff(RED);
+	LedOn(LCD_RED);
+	LedOn(LCD_BLUE);
+	LedOff(LCD_GREEN);
+
+	/* Lcd initialize */
+	LCDCommand(LCD_CLEAR_CMD);
+	LCDMessage(LINE1_START_ADDR,"STATE 1");
+	
+	/* Debug initialize */
+	DebugPrintf("\n\r\n\rState 1\n\r");
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -135,10 +159,146 @@ State Machine Function Definitions
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
-{
-
+{	
+	if(bState)	// Goto UserApp1SM_State1()
+	{
+		UserApp1_StateMachine = UserApp1SM_State1;
+	}
+	
+	if(!bState)	// Goto UserApp1SM_State2()
+	{
+		UserApp1_StateMachine = UserApp1SM_State2;
+	}
+	
 } /* end UserApp1SM_Idle() */
-    
+
+static void UserApp1SM_State1(void)
+{
+	/* Variables */
+	static u8 u8Index = 0;
+	static u8 au8DebugInput[256] = NULL;
+	bool bInputCheck = FALSE;
+	
+	/* Module 1 */
+	if(DebugScanf(&au8DebugInput[u8Index]) >= 1)
+	{
+		u8Index++;
+		
+		if((au8DebugInput[u8Index-1] == '\r'))	// Check if input "enter"
+		{
+			if((au8DebugInput[u8Index-2] == '2') && (2 == u8Index))	// Right format : 1<RC>
+			{
+				bInputCheck = TRUE;
+			}
+			else	// Default
+			{
+				DebugPrintf("\n\rInvalid Command\n\r");
+			}
+			
+			u8Index = 0;
+		}
+	}
+	
+	/* If button2 is pressed or debug input 2 */
+	if(WasButtonPressed(BUTTON2) || bInputCheck)
+	{
+		ButtonAcknowledge(BUTTON2);
+		
+		LedOff(WHITE);
+		LedOff(PURPLE);
+		LedOff(BLUE);
+		LedOff(CYAN);
+		LedBlink(GREEN,LED_1HZ);
+		LedBlink(YELLOW,LED_2HZ);
+		LedBlink(ORANGE,LED_4HZ);
+		LedBlink(RED,LED_8HZ);
+		LedOff(LCD_BLUE);
+		LedPWM(LCD_GREEN,LED_PWM_20);
+		
+		LCDCommand(LCD_CLEAR_CMD);
+		LCDMessage(LINE1_START_ADDR,"STATE 2");
+		
+		DebugPrintf("\n\r\n\rState 2\n\r");
+		
+		PWMAudioOn(BUZZER1);
+		
+		UserApp1_StateMachine = UserApp1SM_Idle;
+		bState=FALSE;
+	}
+	
+} /* end UserApp1SM_State1() */
+
+static void UserApp1SM_State2(void)
+{
+	/* Variables */
+	static u16 u16BuzzerTimeCount = 0;
+	static u8 u8Index = 0;
+	static u8 au8DebugInput[256] = NULL;
+	bool bInputCheck = FALSE;
+	
+	/* Module 2 */
+	if(DebugScanf(&au8DebugInput[u8Index]) >= 1)
+	{
+		u8Index++;
+		
+		if((au8DebugInput[u8Index-1] == '\r'))	// Check if input "enter"
+		{
+			if((au8DebugInput[u8Index-2] == '1') && (2 == u8Index)) // Right format : 1<RC>
+			{
+				bInputCheck = TRUE;
+			}
+			else	// Default
+			{
+				DebugPrintf("\n\rInvalid Command\n\r");
+			}
+			
+			u8Index = 0;
+		}
+	}
+	
+	/*- Buzzer -*/
+	u16BuzzerTimeCount++;
+	
+	if(100 == u16BuzzerTimeCount)// Turn off buzzer 100ms evey 1s
+	{
+		PWMAudioOff(BUZZER1);
+	}
+	
+	if(1000 == u16BuzzerTimeCount)// Turn on buzzer evey 1s
+	{
+		u16BuzzerTimeCount = 0;
+		PWMAudioOn(BUZZER1);
+	}
+	
+	/* If button1 is pressed or debug input 1 */
+	if(WasButtonPressed(BUTTON1) || bInputCheck)
+	{
+		ButtonAcknowledge(BUTTON1);
+		
+		LedOn(WHITE);
+		LedOn(PURPLE);
+		LedOn(BLUE);
+		LedOn(CYAN);
+		LedOff(GREEN);
+		LedOff(YELLOW);
+		LedOff(ORANGE);
+		LedOff(RED);
+		LedOn(LCD_BLUE);
+		LedOff(LCD_GREEN);
+
+		LCDCommand(LCD_CLEAR_CMD);
+		LCDMessage(LINE1_START_ADDR,"STATE 1");
+		
+		DebugPrintf("\n\r\n\rState 1\n\r");
+		
+		u16BuzzerTimeCount = 0;
+		PWMAudioOff(BUZZER1);
+		
+		UserApp1_StateMachine = UserApp1SM_Idle;
+		bState=TRUE;
+	}
+	
+} /* end UserApp1SM_State2() */
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
