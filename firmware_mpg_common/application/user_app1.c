@@ -259,7 +259,7 @@ static void UserAppSM1_WaitChannelOpen()
 static void UserApp1SM_Idle(void)
 {
 	static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
-	u8 au8DataContent[26];
+	u8 au8DataContent[26] = NULL;
 
 	/* Button0 open or close the ANT_CHANNEL_USERAPP channel*/
 	if( WasButtonPressed(BUTTON0) )
@@ -302,6 +302,9 @@ static void UserApp1SM_Idle(void)
 				au8DataContent[3 * i + 1] = HexToASCIICharUpper(G_au8AntApiCurrentMessageBytes[i] % 16);
 				au8DataContent[3 * i + 2] = '-';
 			}
+			
+			DebugPrintf(au8DataContent);
+			DebugLineFeed();
 		}
 		else if( G_eAntApiCurrentMessageClass == ANT_TICK )
 		{
