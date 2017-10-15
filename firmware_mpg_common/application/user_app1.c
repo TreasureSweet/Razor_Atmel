@@ -98,11 +98,9 @@ void UserApp1Initialize(void)
 	/* LCD Interface */
 	                                /* "01234567890123456789" */
 	static u8 au8LCD_Message_LINE1[] = "ANT TASK_2          ";
-	static u8 au8LCD_Message_LINE2[] = "BUT0:CHANNEL KEY    ";
 	
 	LCDCommand(LCD_CLEAR_CMD);
 	LCDMessage(LINE1_START_ADDR,au8LCD_Message_LINE1);
-	LCDMessage(LINE2_START_ADDR,au8LCD_Message_LINE2);
 	
 	/* Start with LED0 in RED state = channel is not configured */
 	LedOn(RED);
@@ -259,7 +257,9 @@ static void UserAppSM1_WaitChannelOpen()
 static void UserApp1SM_Idle(void)
 {
 	static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
-	u8 au8DataContent[26] = NULL;
+	                            /* "01234567890123456789" */
+	static u8 au8MissedMessage[] = "MIS:                ";
+	u8 au8DataContent[26];
 
 	/* Button0 open or close the ANT_CHANNEL_USERAPP channel*/
 	if( WasButtonPressed(BUTTON0) )
@@ -303,6 +303,8 @@ static void UserApp1SM_Idle(void)
 				au8DataContent[3 * i + 2] = '-';
 			}
 			
+			au8DataContent[3 * ANT_DATA_BYTES] = '\0';
+			
 			DebugPrintf(au8DataContent);
 			DebugLineFeed();
 		}
@@ -314,6 +316,7 @@ static void UserApp1SM_Idle(void)
 			if( G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX] == EVENT_TRANSFER_TX_FAILED )
 			{
 				au8TestMessage[3]++;
+				
 				if( au8TestMessage[3] == 0 )
 				{
 					au8TestMessage[2]++;
@@ -322,6 +325,15 @@ static void UserApp1SM_Idle(void)
 						au8TestMessage[1]++;
 					}
 				}
+				
+				/* get au8MissedMessage and display it on lcd line2 */
+				for( u8 i = 0; i < 8; i++ )
+				{
+					au8MissedMessage[2 * i + 4] = HexToASCIICharUpper(au8TestMessage[i] / 16);
+					au8MissedMessage[2 * i + 5] = HexToASCIICharUpper(au8TestMessage[i] % 16);
+				}
+				
+				LCDMessage(LINE2_START_ADDR,au8MissedMessage);
 			}
 			
 			/* au8TestMessage 5 to 7 used to count failed message */
