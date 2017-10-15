@@ -86,8 +86,7 @@ Bp2=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\drivers\ant.c}.1258.1
 Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.209.3" 0 0 1 "" 0 "" 0
 Bp4=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.142.3" 0 0 1 "" 0 "" 0
 Bp5=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.231.3" 0 0 1 "" 0 "" 0
-Bp6=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.253.3" 0 0 1 "" 0 "" 0
-Count=7
+Count=6
 [Aliases]
 Count=0
 SuppressDialog=0

@@ -250,7 +250,7 @@ static void UserAppSM1_WaitChannelOpen()
 		LedOff(YELLOW);
 		LedBlink(RED, LED_4HZ);
 
-		UserApp1_StateMachine = UserApp1SM_Error;
+		UserApp1_StateMachine = UserApp1SM_Idle;
 	}
 } /* end UserAppSM1_WaitChannelOpen() */
 
