@@ -95,12 +95,8 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-	/* LCD Interface */
-	                                /* "01234567890123456789" */
-	static u8 au8LCD_Message_LINE1[] = "ANT TASK_2          ";
-	
+	/* LCD Clear */
 	LCDCommand(LCD_CLEAR_CMD);
-	LCDMessage(LINE1_START_ADDR,au8LCD_Message_LINE1);
 	
 	/* Start with LED0 in RED state = channel is not configured */
 	LedOn(RED);
@@ -258,6 +254,7 @@ static void UserApp1SM_Idle(void)
 {
 	static u8 au8TestMessage[] = {0x5B, 0, 0, 0, 0xFF, 0, 0, 0};
 	                            /* "01234567890123456789" */
+	static u8 au8TotalMessage[] = "TOT:                ";
 	static u8 au8MissedMessage[] = "MIS:                ";
 	u8 au8DataContent[26];
 
@@ -349,6 +346,15 @@ static void UserApp1SM_Idle(void)
 					}
 				}
 			}
+			
+			/* get au8TotalMessage and display it on lcd line1 */
+			for( u8 i = 0; i < 8; i++ )
+			{
+				au8TotalMessage[2 * i + 4] = HexToASCIICharUpper(au8TestMessage[i] / 16);
+				au8TotalMessage[2 * i + 5] = HexToASCIICharUpper(au8TestMessage[i] % 16);
+			}
+			
+			LCDMessage(LINE1_START_ADDR,au8TotalMessage);
 		}
 	} /* end AntReadData() */
 } /* end UserApp1SM_Idle() */
