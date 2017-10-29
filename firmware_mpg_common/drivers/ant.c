@@ -1309,7 +1309,8 @@ static u8 AntProcessMessage(void)
         {
           case RESPONSE_NO_ERROR: 
           {
-            AntTickExtended(RESPONSE_NO_ERROR);
+            /* Forward this event to the application */
+            AntTickExtended(au8MessageCopy);
             break;
           }
 
@@ -1332,7 +1333,7 @@ static u8 AntProcessMessage(void)
 
           case EVENT_RX_FAIL_GO_TO_SEARCH: /* slave has lost sync with Master (channel still open) */
           {
-            /* The slave missed enough consecutive messages so it goes back to search: communicate this to the
+            /* The Slave missed enough consecutive messages so it goes back to search: communicate this to the
             application in case it matters. Could also queue a debug message here. */
             AntTickExtended(au8MessageCopy);
             break;
@@ -1344,7 +1345,8 @@ static u8 AntProcessMessage(void)
             next message */
             if(G_asAntChannelConfiguration[u8Channel].AntChannelType == CHANNEL_TYPE_MASTER)
             {
-              AntTickExtended(au8MessageCopy);
+             /* Forward this event to the application */
+             AntTickExtended(au8MessageCopy);
             }
             break;
           } 
@@ -1353,6 +1355,7 @@ static u8 AntProcessMessage(void)
           { 
             G_asAntChannelConfiguration[u8Channel].AntFlags |= _ANT_FLAGS_GOT_ACK;
 
+            /* Forward this event to the application */
             AntTickExtended(au8MessageCopy);
             break;
           } 
@@ -1366,7 +1369,7 @@ static u8 AntProcessMessage(void)
 
           case EVENT_RX_SEARCH_TIMEOUT: /* The ANT channel is going to close due to search timeout */
           {
-            /* Forward this to application */
+            /* Forward this event to the application */
             AntTickExtended(au8MessageCopy);
             break;
           }
@@ -1375,6 +1378,9 @@ static u8 AntProcessMessage(void)
           {
             DebugPrintf("Channel closed\n\r");
             G_asAntChannelConfiguration[u8Channel].AntFlags &= ~(_ANT_FLAGS_CHANNEL_CLOSE_PENDING | _ANT_FLAGS_CHANNEL_OPEN);
+
+            /* We do not forward this event to the application since the AntChannelStatus should be used to check 
+            for a closed channel */
             break;
           }
           
@@ -1384,6 +1390,10 @@ static u8 AntProcessMessage(void)
             DebugPrintf(": unexpected channel event\n\r");
 
             G_u32AntFlags |= _ANT_FLAGS_UNEXPECTED_EVENT;
+
+            /* Forward this event to the application */
+            AntTickExtended(au8MessageCopy);
+
             break;
         } /* end Ant_pu8AntRxBufferUnreadMsg[EVENT_CODE_INDEX] */
       } /* end else RF event */
@@ -1399,12 +1409,19 @@ static u8 AntProcessMessage(void)
       /* Parse the extended data and put the message to the application buffer */
       AntParseExtendedData(au8MessageCopy, &sExtendedData);
       AntQueueExtendedApplicationMessage(ANT_DATA, &au8MessageCopy[BUFFER_INDEX_MESG_DATA], &sExtendedData);
+ 
+#if 0 
+/* 2017-JUN-23 Don't think this should be here as it should be
+the application looking for data messages and deciding what
+that should be. If it is required, perhaps the call to AntTickExtended
+should be modified since au8MessageCopy doesn't have an EVENT CODE. */
       
       /* If this is a slave device, then a data message received means it's time to send */
       if(G_asAntChannelConfiguration[u8Channel].AntChannelType == CHANNEL_TYPE_SLAVE)
       {
-        AntTickExtended(RESPONSE_NO_ERROR);
+        AntTickExtended(au8MessageCopy);
       }
+#endif      
       
       break;
     } /* end case MESG_BROADCAST_DATA_ID */
@@ -1465,7 +1482,7 @@ static void AntTickExtended(u8* pu8AntMessage_)
   au8Message[ANT_TICK_MSG_CHANNEL_INDEX]          = *(pu8AntMessage_ + BUFFER_INDEX_CHANNEL_NUM);
   au8Message[ANT_TICK_MSG_RESPONSE_TYPE_INDEX]    = *(pu8AntMessage_ + BUFFER_INDEX_RESPONSE_MESG_ID);
   au8Message[ANT_TICK_MSG_EVENT_CODE_INDEX]       = *(pu8AntMessage_ + BUFFER_INDEX_RESPONSE_CODE);
-  au8Message[ANT_TICK_MSG_SENTINEL3_INDEX]        = MESSAGE_ANT_TICK;
+  au8Message[ANT_TICK_MSG_SENTINEL_INDEX]         = MESSAGE_ANT_TICK_SENTINEL;
   au8Message[ANT_TICK_MSG_MISSED_HIGH_BYTE_INDEX] = Ant_u8SlaveMissedMessageHigh;
   au8Message[ANT_TICK_MSG_MISSED_MID_BYTE_INDEX]  = Ant_u8SlaveMissedMessageMid;
   au8Message[ANT_TICK_MSG_MISSED_LOW_BYTE_INDEX]  = Ant_u8SlaveMissedMessageLow;
