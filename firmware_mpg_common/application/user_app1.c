@@ -144,14 +144,14 @@ void UserApp1Initialize(void)
   /* If good initialization, set state to Idle */
   if( AntAssignChannel(&sAntSetupData) )
   {
-    /* Channel assignment is queued so start timer */
+    /* Channel is configured, so change LED to yellow */
 #ifdef EIE1
-    UserApp1_u32Timeout = G_u32SystemTime1ms;
-    LedOn(RED);
+    LedOff(RED);
+    LedOn(YELLOW);
 #endif /* EIE1 */
     
 #ifdef MPG2
-    LedOn(RED0);
+    LedOn(GREEN0);
 #endif /* MPG2 */
     
     UserApp1_StateMachine = UserApp1SM_WaitChannelAssign;
@@ -210,21 +210,11 @@ static void UserApp1SM_WaitChannelAssign(void)
   /* Check if the channel assignment is complete */
   if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_CONFIGURED)
   {
-#ifdef EIE1
-    LedOff(RED);
-    LedOn(YELLOW);
-#endif /* EIE1 */
-    
-#ifdef MPG2
-    LedOff(RED0);
-    LedOn(GREEN0);
-#endif /* MPG2 */
-
     UserApp1_StateMachine = UserApp1SM_Idle;
   }
   
   /* Monitor for timeout */
-  if( IsTimeUp(&UserApp1_u32Timeout, 5000) )
+  if( IsTimeUp(&UserApp1_u32Timeout, 3000) )
   {
     DebugPrintf("\n\r***Channel assignment timeout***\n\n\r");
     UserApp1_StateMachine = UserApp1SM_Error;
@@ -349,10 +339,6 @@ static void UserApp1SM_ChannelOpen(void)
     {
       UserApp1_u32DataMsgCount++;
       
-      /* We are synced with a device, so blue is solid */
-      LedOff(GREEN);
-      LedOn(BLUE);
-
       /* Check if the new data is the same as the old data and update as we go */
       bGotNewData = FALSE;
       for(u8 i = 0; i < ANT_APPLICATION_MESSAGE_BYTES; i++)
@@ -459,6 +445,14 @@ static void UserApp1SM_ChannelOpen(void)
         switch (u8LastState)
         {
 #ifdef MPG1
+          /* If we are synced with a device, blue is solid */
+          case RESPONSE_NO_ERROR:
+          {
+            LedOff(GREEN);
+            LedOn(BLUE);
+            break;
+          }
+
           /* If we are paired but missing messages, blue blinks */
           case EVENT_RX_FAIL:
           {
@@ -476,6 +470,14 @@ static void UserApp1SM_ChannelOpen(void)
           }
 #endif /* MPG 1 */
 #ifdef MPG2
+          /* If we are synced with a device, blue is solid */
+          case RESPONSE_NO_ERROR:
+          {
+            LedOff(GREEN0);
+            LedOn(BLUE0);
+            break;
+          }
+
           /* If we are paired but missing messages, blue blinks */
           case EVENT_RX_FAIL:
           {
@@ -495,17 +497,11 @@ static void UserApp1SM_ChannelOpen(void)
           /* If the search times out, the channel should automatically close */
           case EVENT_RX_SEARCH_TIMEOUT:
           {
-            DebugPrintf("Search timeout event\r\n");
+            DebugPrintf("Search timeout\r\n");
             break;
           }
 
-          case EVENT_CHANNEL_CLOSED:
-          {
-            DebugPrintf("Channel closed event\r\n");
-            break;
-          }
-
-            default:
+          default:
           {
             DebugPrintf("Unexpected Event\r\n");
             break;
