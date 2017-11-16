@@ -87,7 +87,10 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 
+//	PWMAudioOff(BUZZER1);
+//	PWMAudioOff(BUZZER2);
+//	PWMAudioSetFrequency(BUZZER1,1000);
+//	PWMAudioSetFrequency(BUZZER2,1000);
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -136,7 +139,55 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	static u32 u32AllLedValue = PB_13_LED_WHT | PB_14_LED_PRP | PB_15_LED_ORG | PB_16_LED_CYN | PB_17_LED_YLW | PB_18_LED_BLU | PB_19_LED_GRN | PB_20_LED_RED;
+	static u8 u8ToggleTime = 0;
+	static bool bLedOn = FALSE;
+	static u8 u8BuzzerTime = 0;
+	
+	if( !(AT91C_BASE_PIOA->PIO_PDSR & PA_17_BUTTON0) ) // Press
+	{
+//		PWMAudioOn(BUZZER1);
+//		PWMAudioOn(BUZZER2);
+		u8BuzzerTime++;
+		
+		if( u8ToggleTime++ == 250)
+		{
+			u8ToggleTime = 0;
+			
+			bLedOn = !bLedOn;
+		}
+		
+		if(bLedOn)
+		{
+			AT91C_BASE_PIOB->PIO_SODR &= ~u32AllLedValue;
+		}
+		else
+		{
+			AT91C_BASE_PIOB->PIO_SODR |= u32AllLedValue;
+		}
+		
+		if(u8BuzzerTime == 5)
+		{
+			AT91C_BASE_PIOA->PIO_SODR |= (PA_28_BUZZER1 | PA_29_BUZZER2);
+		}
+		
+		if(u8BuzzerTime == 10)
+		{
+			u8BuzzerTime == 0;
+			
+			AT91C_BASE_PIOA->PIO_CODR |= (PA_28_BUZZER1 | PA_29_BUZZER2);
+		}
+	}
+	else                                               // No press
+	{
+		u8ToggleTime = 0;
+		bLedOn = FALSE;
+//		PWMAudioOff(BUZZER1);
+//		PWMAudioOff(BUZZER2);
+		
+		AT91C_BASE_PIOA->PIO_CODR |= (PA_28_BUZZER1 | PA_29_BUZZER2);
+		AT91C_BASE_PIOB->PIO_SODR &= ~u32AllLedValue;
+	}
 } /* end UserApp1SM_Idle() */
     
 
