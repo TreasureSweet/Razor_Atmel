@@ -87,10 +87,6 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-//	PWMAudioOff(BUZZER1);
-//	PWMAudioOff(BUZZER2);
-//	PWMAudioSetFrequency(BUZZER1,1000);
-//	PWMAudioSetFrequency(BUZZER2,1000);
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -142,14 +138,29 @@ static void UserApp1SM_Idle(void)
 	static u32 u32AllLedValue = PB_13_LED_WHT | PB_14_LED_PRP | PB_15_LED_ORG | PB_16_LED_CYN | PB_17_LED_YLW | PB_18_LED_BLU | PB_19_LED_GRN | PB_20_LED_RED;
 	static u8 u8ToggleTime = 0;
 	static bool bLedOn = FALSE;
-	static u8 u8BuzzerTime = 0;
+	/*1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2*/
+	static u16 au16NotesRight[]    = {G6, E6, F6, G6, E6, F6, G6, G5, A5, B5, C6, D6, E6, F6, E6, C6, D6, E6, E5, F5, G5, A5, G5, F5, G5, C6, B5, C6, A5, C6, B5, A5, G5, F5, G5, F5, E5, F5, G5, A5, B5, C6, A5, C6, B5, C6, B5, A5, B5, A5, B5, C6, D6, E6, F6, G6};
+	static u16 au16DurationRight[] = {QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN};
+	static u16 au16NoteTypeRight[] = {RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT};
+	static u8 u8IndexRight   = 0;
+	static u8 u8CurrentIndexRight = 0;
+	static u32 u32RightTimer = 0;
+	static u16 u16CurrentDurationRight = 0;
+	static u16 u16NoteSilentDurationRight = 0;
+	static bool bNoteActiveNextRight = TRUE;
+	/*1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2   3   4   1   2*/
+	static u16 au16NotesLeft[]    = {G5, E5, F5, G5, E5, F5, G5, G4, A4, B4, C5, D5, E5, F5, E5, C5, D5, E5, E4, F4, G4, A4, G4, F4, G4, C5, B4, C5, A4, C5, B4, A4, G4, F4, G4, F4, E4, F4, G4, A4, B4, C5, A4, C5, B4, C5, B4, A4, B4, A4, B4, C5, D5, E5, F5, G5};
+	static u16 au16DurationLeft[] = {QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, QN, EN, EN, QN, EN, EN, EN, EN, EN, EN, EN, EN, EN, EN};
+	static u16 au16NoteTypeLeft[] = {RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT, RT};
+	static u8 u8IndexLeft   = 0;
+	static u8 u8CurrentIndexLeft = 0;
+	static u32 u32LeftTimer = 0;
+	static u16 u16CurrentDurationLeft = 0;
+	static u16 u16NoteSilentDurationLeft = 0;
+	static bool bNoteActiveNextLeft = TRUE;
 	
 	if( !(AT91C_BASE_PIOA->PIO_PDSR & PA_17_BUTTON0) ) // Press
 	{
-//		PWMAudioOn(BUZZER1);
-//		PWMAudioOn(BUZZER2);
-		u8BuzzerTime++;
-		
 		if( u8ToggleTime++ == 250)
 		{
 			u8ToggleTime = 0;
@@ -166,26 +177,147 @@ static void UserApp1SM_Idle(void)
 			AT91C_BASE_PIOB->PIO_SODR |= u32AllLedValue;
 		}
 		
-		if(u8BuzzerTime == 5)
+		/* Left Hand */
+		if(IsTimeUp(&u32LeftTimer, (u32)u16CurrentDurationLeft))
 		{
-			AT91C_BASE_PIOA->PIO_SODR |= (PA_28_BUZZER1 | PA_29_BUZZER2);
-		}
+			u32LeftTimer = G_u32SystemTime1ms;
+			u8CurrentIndexLeft = u8IndexLeft;
+
+			/* Set up to play current note */     
+			if(bNoteActiveNextLeft)     
+			{
+				if(au16NoteTypeLeft[u8CurrentIndexLeft] == RT)
+				{
+					u16CurrentDurationLeft = au16DurationLeft[u8CurrentIndexLeft] - REGULAR_NOTE_ADJUSTMENT;
+					u16NoteSilentDurationLeft = REGULAR_NOTE_ADJUSTMENT;
+					bNoteActiveNextLeft = FALSE;
+				}
+				else if(au16NoteTypeLeft[u8CurrentIndexLeft] == ST)
+				{
+					u16CurrentDurationLeft = STACCATO_NOTE_TIME;
+					u16NoteSilentDurationLeft = au16DurationLeft[u8CurrentIndexLeft] - STACCATO_NOTE_TIME;
+					bNoteActiveNextLeft = FALSE;
+				}
+				else if(au16NoteTypeLeft[u8CurrentIndexLeft] == HT)
+				{
+					u16CurrentDurationLeft = au16DurationLeft[u8CurrentIndexLeft];
+					u16NoteSilentDurationLeft = 0;
+					bNoteActiveNextLeft = TRUE;
+					u8IndexLeft++;
+					
+					if(u8IndexLeft == sizeof(au16NotesLeft) / sizeof(u16) )
+					{
+						u8IndexLeft = 0;
+					}
+				}
+
+				/* Set the buzzer frequency for the note (handle NO special case) */
+				if(au16NotesLeft[u8CurrentIndexLeft] != NO)
+				{
+					PWMAudioSetFrequency(BUZZER1, au16NotesLeft[u8CurrentIndexLeft]);
+					PWMAudioOn(BUZZER1);
+				}
+				else
+				{
+					PWMAudioOff(BUZZER1);
+				}
+			}
+			else
+			{
+				PWMAudioOff(BUZZER1);
+				u32LeftTimer = G_u32SystemTime1ms;
+				u16CurrentDurationLeft = u16NoteSilentDurationLeft;
+				bNoteActiveNextLeft = TRUE;
+				u8IndexLeft++;
+				
+				if(u8IndexLeft == sizeof(au16NotesLeft) / sizeof(u16) )
+				{
+					u8IndexLeft = 0;
+				}
+			} /* end else if(bNoteActiveNextLeft) */
+		} /* end if(IsTimeUp(&u32LeftTimer, (u32)u16CurrentDurationLeft)) */ 
 		
-		if(u8BuzzerTime == 10)
+		/* Right Hand */
+		if(IsTimeUp(&u32RightTimer, (u32)u16CurrentDurationRight))
 		{
-			u8BuzzerTime == 0;
-			
-			AT91C_BASE_PIOA->PIO_CODR |= (PA_28_BUZZER1 | PA_29_BUZZER2);
-		}
+			u32RightTimer = G_u32SystemTime1ms;
+			u8CurrentIndexRight = u8IndexRight;
+
+			/* Set up to play current note */     
+			if(bNoteActiveNextRight)     
+			{
+				if(au16NoteTypeRight[u8CurrentIndexRight] == RT)
+				{
+					u16CurrentDurationRight = au16DurationRight[u8CurrentIndexRight] - REGULAR_NOTE_ADJUSTMENT;
+					u16NoteSilentDurationRight = REGULAR_NOTE_ADJUSTMENT;
+					bNoteActiveNextRight = FALSE;
+				}
+				else if(au16NoteTypeRight[u8CurrentIndexRight] == ST)
+				{
+					u16CurrentDurationRight = STACCATO_NOTE_TIME;
+					u16NoteSilentDurationRight = au16DurationRight[u8CurrentIndexRight] - STACCATO_NOTE_TIME;
+					bNoteActiveNextRight = FALSE;
+				}
+				else if(au16NoteTypeRight[u8CurrentIndexRight] == HT)
+				{
+					u16CurrentDurationRight = au16DurationRight[u8CurrentIndexRight];
+					u16NoteSilentDurationRight = 0;
+					bNoteActiveNextRight = TRUE;
+					u8IndexRight++;
+					
+					if(u8IndexRight == sizeof(au16NotesRight) / sizeof(u16) )
+					{
+						u8IndexRight = 0;
+					}
+				}
+
+				/* Set the buzzer frequency for the note (handle NO special case) */
+				if(au16NotesRight[u8CurrentIndexRight] != NO)
+				{
+					PWMAudioSetFrequency(BUZZER2, au16NotesRight[u8CurrentIndexRight]);
+					PWMAudioOn(BUZZER2);
+				}
+				else
+				{
+					PWMAudioOff(BUZZER2);
+				}
+			}
+			else
+			{
+				PWMAudioOff(BUZZER2);
+				u32RightTimer = G_u32SystemTime1ms;
+				u16CurrentDurationRight = u16NoteSilentDurationRight;
+				bNoteActiveNextRight = TRUE;
+				u8IndexRight++;
+				
+				if(u8IndexRight == sizeof(au16NotesRight) / sizeof(u16) )
+				{
+					u8IndexRight = 0;
+				}
+			} /* end else if(bNoteActiveNextLeft) */
+		} /* end if(IsTimeUp(&u32LeftTimer, (u32)u16CurrentDurationLeft)) */ 
 	}
 	else                                               // No press
 	{
 		u8ToggleTime = 0;
 		bLedOn = FALSE;
-//		PWMAudioOff(BUZZER1);
-//		PWMAudioOff(BUZZER2);
 		
-		AT91C_BASE_PIOA->PIO_CODR |= (PA_28_BUZZER1 | PA_29_BUZZER2);
+		PWMAudioOff(BUZZER1);
+		u8IndexLeft   = 0;
+		u8CurrentIndexLeft = 0;
+		u32LeftTimer = 0;
+		u16CurrentDurationLeft = 0;
+		u16NoteSilentDurationLeft = 0;
+		bNoteActiveNextLeft = TRUE;
+		
+		PWMAudioOff(BUZZER2);
+		u8IndexRight   = 0;
+		u8CurrentIndexRight = 0;
+		u32RightTimer = 0;
+		u16CurrentDurationRight = 0;
+		u16NoteSilentDurationRight = 0;
+		bNoteActiveNextRight = TRUE;
+		
 		AT91C_BASE_PIOB->PIO_SODR &= ~u32AllLedValue;
 	}
 } /* end UserApp1SM_Idle() */
