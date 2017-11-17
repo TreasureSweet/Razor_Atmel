@@ -32,7 +32,7 @@ Constants / Definitions
 /* Required constants for ANT channel configuration */
 #define ANT_CHANNEL_TYPE_USERAPP_MASTER        CHANNEL_TYPE_MASTER    /* ANT MASTER */
 #define ANT_CHANNEL_TYPE_USERAPP_SLAVE         CHANNEL_TYPE_SLAVE     /* ANT SLAVE */
-#define ANT_CHANNEL_USERAPP_MASTER              ANT_CHANNEL_0         // Channel 0 - 7
+#define ANT_CHANNEL_USERAPP_MASTER              ANT_CHANNEL_1         // Channel 0 - 7
 #define ANT_CHANNEL_USERAPP_SLAVE               ANT_CHANNEL_0         // Channel 0 - 7
 
 #define ANT_DEVICEID_DEC_USERAPP        (u8)135

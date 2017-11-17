@@ -10,7 +10,7 @@ LimitSize=0
 ByteLimit=50
 [DebugChecksum]
 <<<<<<< HEAD
-Checksum=2006741030
+Checksum=-925467902
 =======
 Checksum=-762988365
 >>>>>>> refs/remotes/origin/master
@@ -92,13 +92,14 @@ mode=0
 Bp0=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\drivers\ant.c}.1671.5" 0 0 1 "" 0 "" 0
 Bp1=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\drivers\ant.c}.1262.13" 0 0 1 "" 0 "" 0
 Bp2=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\drivers\ant.c}.1258.13" 0 0 1 "" 0 "" 0
-Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.303.3" 0 0 1 "" 0 "" 0
-Bp4=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.372.3" 0 0 1 "" 0 "" 0
-Bp5=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1020.1" 0 0 1 "" 0 "" 0
-Bp6=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1020.1" 0 0 1 "" 0 "" 0
-Bp7=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1012.3" 0 0 1 "" 0 "" 0
-Bp8=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.984.3" 0 0 1 "" 0 "" 0
-Count=9
+Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.363.3" 0 0 1 "" 0 "" 0
+Bp4=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1013.1" 0 0 1 "" 0 "" 0
+Bp5=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1013.1" 0 0 1 "" 0 "" 0
+Bp6=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1013.1" 0 0 1 "" 0 "" 0
+Bp7=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.1013.1" 0 0 1 "" 0 "" 0
+Bp8=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.294.3" 0 0 1 "" 0 "" 0
+Bp9=_ 1 "EMUL_CODE" "{$PROJ_DIR$\..\..\firmware_mpg_common\application\user_app1.c}.530.5" 0 0 1 "" 0 "" 0
+Count=10
 [Aliases]
 Count=0
 SuppressDialog=0

@@ -199,15 +199,6 @@ static bool bGameOver(void)
 		
 		LedOffAll();
 		
-		if(bMaster)
-		{
-			AntCloseChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
-		}
-		else
-		{
-			AntCloseChannelNumber(ANT_CHANNEL_USERAPP_SLAVE);
-		}
-		
 		return TRUE;
 	}
 }
@@ -504,6 +495,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 {
 	static u8 au8Message[] = {0, 0, 0, 0, 0, 0, 0, 0};
 	static u8 u8State = 0;
+	static u8 u8Test = 0;
 	static u16 u16TimeCount = SeekTime;
 	static u8 u8DisplayTime = 250;
 	u8 au8TimeDisplay[] = "  s";
@@ -513,7 +505,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 	{
 		if(G_eAntApiCurrentMessageClass == ANT_TICK)
 		{
-			AntQueueAcknowledgedMessage(ANT_CHANNEL_USERAPP_MASTER, au8Message);
+			AntQueueBroadcastMessage(ANT_CHANNEL_USERAPP_MASTER, au8Message);
 		}
 		
 		/* Get Seeker's message */
@@ -533,11 +525,13 @@ static void UserApp1SM_ChannelOpen_Master(void)
 			G_au8AntApiCurrentMessageBytes[0] is message about distance from seeker */
 			if(u8State == 2)
 			{
-				if(G_au8AntApiCurrentMessageBytes[0] > 90)
+				u8Test = abs(G_sAntApiCurrentMessageExtData.s8RSSI);
+				
+				if(u8Test > 90)
 				{
 					LedOffAll();
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 86)
+				else if(u8Test > 86)
 				{
 					LedOff(RED);
 					LedOff(ORANGE);
@@ -548,7 +542,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOff(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 82)
+				else if(u8Test > 82)
 				{
 					LedOff(RED);
 					LedOff(ORANGE);
@@ -559,7 +553,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 78)
+				else if(u8Test > 78)
 				{
 					LedOff(RED);
 					LedOff(ORANGE);
@@ -570,7 +564,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 74)
+				else if(u8Test > 74)
 				{
 					LedOff(RED);
 					LedOff(ORANGE);
@@ -581,7 +575,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 70)
+				else if(u8Test > 70)
 				{
 					LedOff(RED);
 					LedOff(ORANGE);
@@ -592,7 +586,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 66)
+				else if(u8Test > 66)
 				{
 					LedOff(RED);
 					LedOff(ORANGE);
@@ -603,7 +597,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 62)
+				else if(u8Test > 62)
 				{
 					LedOff(RED);
 					LedOn(ORANGE);
@@ -614,7 +608,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(G_au8AntApiCurrentMessageBytes[0] > 40) // Find!
+				else if(u8Test > 40) // Find!
 				{
 					u8State = 3;
 					
@@ -728,7 +722,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 		/* New data message: check what it is */
 		if(G_eAntApiCurrentMessageClass == ANT_DATA)
 		{
-			if( (u8State == 0) || (u8State == 2) );
+			if(u8State == 0);
 			{
 				AntQueueAcknowledgedMessage(ANT_CHANNEL_USERAPP_SLAVE, au8Message);
 			}
@@ -738,7 +732,6 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 			if(u8State == 2)
 			{
 				u8Test = abs(G_sAntApiCurrentMessageExtData.s8RSSI);
-				au8Message[0] = u8Test;
 				
 				if(u8Test > 90)
 				{
