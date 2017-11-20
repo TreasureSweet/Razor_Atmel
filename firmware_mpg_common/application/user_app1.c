@@ -194,6 +194,7 @@ static bool bGameOver(void)
 	}
 	else
 	{
+		bOn = FALSE;
 		u16TimeCount = 3000;
 		u16ToggleState = 500;
 		
@@ -225,7 +226,7 @@ void UserApp1Initialize(void)
 	LedOffAll();
 	
 	/* Goto UserApp1SM_WaitUserChooseCharactor state */
-	UserApp1_StateMachine = UserApp1SM_WaitUserChooseCharactor;
+	UserApp1_StateMachine = UserApp1SM_ChannelAssign_Master;
 } /* end UserApp1Initialize() */
 
   
@@ -340,18 +341,22 @@ static void UserApp1SM_WaitChannelAssign(void)
 	{
 		if( AntRadioStatusChannel(ANT_CHANNEL_USERAPP_MASTER) == ANT_CONFIGURED)
 		{
+			bMaster = FALSE;
+			
 			/* Channel assignment is successful, so open channel and
 			proceed to Idle state */
-			UserApp1_StateMachine = UserApp1SM_Idle;
+			UserApp1_StateMachine = UserApp1SM_ChannelAssign_Slave;
 		}
 	}
 	else
 	{
 		if( AntRadioStatusChannel(ANT_CHANNEL_USERAPP_SLAVE) == ANT_CONFIGURED)
 		{
+			bMaster = TRUE;
+			
 			/* Channel assignment is successful, so open channel and
 			proceed to Idle state */
-			UserApp1_StateMachine = UserApp1SM_Idle;
+			UserApp1_StateMachine = UserApp1SM_WaitUserChooseCharactor;
 		}
 	}
 	
@@ -368,12 +373,13 @@ static void UserApp1SM_WaitChannelAssign(void)
 /* Wait for User choose a charactor and initial ANT */
 static void UserApp1SM_WaitUserChooseCharactor(void)
 {		
-						/* LCDMessages */
-						/*01234567890123456789*/
+						        /* LCDMessages */
+					         	/*01234567890123456789*/
 	static u8 au8RollPlay[]   = " Hider or Seeker ? ";
-	static u8 au8ChooseInfo[] = "    Hide  Seek     ";
+	static u8 au8ChooseInfo[] = "   |Hide| |Seek|   ";
 	static bool bDisplay = TRUE;
-	
+
+/*-------------------  Display message one time  ----------------------------*/
 	if(bDisplay)
 	{
 		bDisplay = FALSE;
@@ -383,7 +389,12 @@ static void UserApp1SM_WaitUserChooseCharactor(void)
 		LCDMessage(LINE1_START_ADDR, au8RollPlay); 
 		LCDMessage(LINE2_START_ADDR, au8ChooseInfo);
 	}
-	
+/*---------------------------------------------------------------------------*/
+	if(WasButtonPressed(BUTTON0))
+	{
+		ButtonAcknowledge(BUTTON0);
+	}
+		
 	if(WasButtonPressed(BUTTON1)) //User press BUTTON1 to choose hider
 	{
 		ButtonAcknowledge(BUTTON1);
@@ -391,7 +402,7 @@ static void UserApp1SM_WaitUserChooseCharactor(void)
 		bDisplay = TRUE;
 		
 		/* Goto UserApp1SM_ChannelAssign_Master state */
-		UserApp1_StateMachine = UserApp1SM_ChannelAssign_Master;
+		UserApp1_StateMachine = UserApp1SM_Idle;
 	}
 	
 	if(WasButtonPressed(BUTTON2)) // User press BUTTON2 to choose seeker
@@ -401,21 +412,34 @@ static void UserApp1SM_WaitUserChooseCharactor(void)
 		bDisplay = TRUE;
 		
 		/* Goto UserApp1SM_ChannelAssign_Slave state */
-		UserApp1_StateMachine = UserApp1SM_ChannelAssign_Slave;
+		UserApp1_StateMachine = UserApp1SM_Idle;
 	}
 	
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+	}
+	
+/*---------------  Display message when press button  -----------------------*/	
 	if(bDisplay)
 	{
 		LCDCommand(LCD_CLEAR_CMD);
 		LCDMessage(LINE1_START_ADDR, "Press BUT0 to ready ");
 		LCDMessage(LINE2_START_ADDR, "Ready:     NO       ");
 	}
+/*---------------------------------------------------------------------------*/
 }/* end UserApp1SM_WaitUserChooseCharactor */
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
+	/* Hold Butotn3 for 2s to retuen restart */
+	if(IsButtonHeld(BUTTON3, 2000))
+	{
+		UserApp1_StateMachine = UserApp1SM_WaitUserChooseCharactor;
+	}
+	
 	/* Button0 used to open channel */
 	if(WasButtonPressed(BUTTON0))
 	{
@@ -436,22 +460,14 @@ static void UserApp1SM_Idle(void)
 		UserApp1_StateMachine = UserApp1SM_WaitChannelOpen;
 	}
 	
-	/* Hold Butotn3 for 2s to retuen restart */
-	if(IsButtonHeld(BUTTON3, 2000))
+	if(WasButtonPressed(BUTTON1))
 	{
-		if(bMaster)
-		{
-			AntUnassignChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
-		}
-		else
-		{
-			AntUnassignChannelNumber(ANT_CHANNEL_USERAPP_SLAVE);
-		}
+		ButtonAcknowledge(BUTTON1);
+	}
 		
-		UserApp1_u32Timeout = G_u32SystemTime1ms;
-		
-		/* Goto UserApp1SM_WaitChannelUnassign state */
-		UserApp1_StateMachine = UserApp1SM_WaitChannelUnassign;
+	if(WasButtonPressed(BUTTON2))
+	{
+		ButtonAcknowledge(BUTTON2);
 	}
 } /* end UserApp1SM_Idle() */
 
@@ -496,7 +512,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 	static u8 au8Message[] = {0, 0, 0, 0, 0, 0, 0, 0};
 	static u8 u8State = 0;
 	static u8 u8Test = 0;
-	static u16 u16TimeCount = SeekTime;
+	static u16 u16TimeCount = SeekTime * 1000;
 	static u8 u8DisplayTime = 250;
 	u8 au8TimeDisplay[] = "  s";
 	
@@ -505,7 +521,14 @@ static void UserApp1SM_ChannelOpen_Master(void)
 	{
 		if(G_eAntApiCurrentMessageClass == ANT_TICK)
 		{
-			AntQueueBroadcastMessage(ANT_CHANNEL_USERAPP_MASTER, au8Message);
+			if(u8State < 3)
+			{
+				AntQueueBroadcastMessage(ANT_CHANNEL_USERAPP_MASTER, au8Message);
+			}
+			else if(u8State == 3)
+			{
+				AntCloseChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
+			}
 		}
 		
 		/* Get Seeker's message */
@@ -525,7 +548,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 			G_au8AntApiCurrentMessageBytes[0] is message about distance from seeker */
 			if(u8State == 2)
 			{
-				u8Test = abs(G_sAntApiCurrentMessageExtData.s8RSSI);
+				u8Test = G_au8AntApiCurrentMessageBytes[0];
 				
 				if(u8Test > 90)
 				{
@@ -608,7 +631,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 					LedOn(PURPLE);
 					LedOn(WHITE);
 				}
-				else if(u8Test > 40) // Find!
+				else if(u8Test >40)
 				{
 					u8State = 3;
 					
@@ -659,7 +682,6 @@ static void UserApp1SM_ChannelOpen_Master(void)
 			
 			LedOffAll();
 			
-			
 			LCDCommand(LCD_CLEAR_CMD);
 			LCDMessage(LINE1_START_ADDR, "     Game Finish!!   ");
 			LCDMessage(LINE2_START_ADDR, "     You  Win !!!     ");
@@ -671,11 +693,11 @@ static void UserApp1SM_ChannelOpen_Master(void)
 	{
 		if(bGameOver())
 		{
-			u16TimeCount = SeekTime;
+			u16TimeCount = SeekTime * 1000;
 			u8DisplayTime = 250;
 			u8State = 0;
+			u8Test = 0;
 			
-			AntCloseChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
 			UserApp1_u32Timeout = G_u32SystemTime1ms;
 			UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 		}
@@ -694,9 +716,10 @@ static void UserApp1SM_ChannelOpen_Master(void)
 	{
 		LedOffAll();
 		
-		u16TimeCount = SeekTime;
+		u16TimeCount = SeekTime * 1000;
 		u8DisplayTime = 250;
 		u8State = 0;
+		u8Test = 0;
 		
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
@@ -710,7 +733,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 static void UserApp1SM_ChannelOpen_Slave(void)
 {
 	static u8 au8Message[]  = {0, 0, 0, 0, 0, 0, 0, 0};
-	static u16 u16TimeCount = SeekTime;
+	static u16 u16TimeCount = SeekTime * 1000;
 	static u8 u8DisplayTime = 250;
 	u8 au8TimeDisplay[] = "  s";
 	static u8 u8Test = 0;
@@ -722,7 +745,8 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 		/* New data message: check what it is */
 		if(G_eAntApiCurrentMessageClass == ANT_DATA)
 		{
-			if(u8State == 0);
+			/* Stae0 means the first connect so send a message to the master */
+			if( (u8State == 0) || (u8State == 2) || (u8State == 3) )
 			{
 				AntQueueAcknowledgedMessage(ANT_CHANNEL_USERAPP_SLAVE, au8Message);
 			}
@@ -732,6 +756,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 			if(u8State == 2)
 			{
 				u8Test = abs(G_sAntApiCurrentMessageExtData.s8RSSI);
+				au8Message[0] = u8Test;
 				
 				if(u8Test > 90)
 				{
@@ -817,7 +842,6 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 				else if(u8Test > 40) // Find!
 				{
 					u8State = 3;
-					
 					LedOffAll();
 					
 					LCDCommand(LCD_CLEAR_CMD);
@@ -909,9 +933,11 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 	{	
 		if(bGameOver())
 		{
-			u16TimeCount = SeekTime;
+			u16TimeCount = SeekTime * 1000;
 			u8DisplayTime = 250;
 			u8State = 0;
+			u8Test = 0;
+			au8Message[0] = 0;
 			
 			AntCloseChannelNumber(ANT_CHANNEL_USERAPP_SLAVE);
 			UserApp1_u32Timeout = G_u32SystemTime1ms;
@@ -932,11 +958,13 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 	{
 		LedOffAll();
 		
-		u16TimeCount = SeekTime;
+		u16TimeCount = SeekTime * 1000;
 		u8DisplayTime = 250;
 		u8State = 0;
+		u8Test = 0;
+		au8Message[0] = 0;
 		
-		AntCloseChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
+		AntCloseChannelNumber(ANT_CHANNEL_USERAPP_SLAVE);
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 	}
@@ -952,47 +980,17 @@ static void UserApp1SM_WaitChannelClose(void)
 	{
 		if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP_MASTER) == ANT_CLOSED)
 		{
-			AntUnassignChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
 			UserApp1_u32Timeout = G_u32SystemTime1ms;
 			
-			UserApp1_StateMachine = UserApp1SM_WaitChannelUnassign;
+			UserApp1_StateMachine = UserApp1SM_WaitUserChooseCharactor;
 		}
 	}
 	else
 	{
 		if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP_SLAVE) == ANT_CLOSED)
 		{
-			AntUnassignChannelNumber(ANT_CHANNEL_USERAPP_SLAVE);
 			UserApp1_u32Timeout = G_u32SystemTime1ms;
 			
-			UserApp1_StateMachine = UserApp1SM_WaitChannelUnassign;
-		}
-	}
-	
-	/* Check for timeout */
-	if( IsTimeUp(&UserApp1_u32Timeout, 5000) )
-	{
-		LedOn(RED);
-
-		UserApp1_StateMachine = UserApp1SM_Error;
-	}
-} /* end UserApp1SM_WaitChannelClose() */
-
-/*-------------------------------------------------------------------------------------------------------------------*/
-/* Wait channel unassign */
-static void UserApp1SM_WaitChannelUnassign(void)
-{
-	if(bMaster)
-	{
-		if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP_MASTER) == ANT_UNCONFIGURED)
-		{
-			UserApp1_StateMachine = UserApp1SM_WaitUserChooseCharactor;
-		}
-	}
-	else
-	{
-		if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP_SLAVE) == ANT_UNCONFIGURED)
-		{
 			UserApp1_StateMachine = UserApp1SM_WaitUserChooseCharactor;
 		}
 	}
@@ -1005,11 +1003,12 @@ static void UserApp1SM_WaitChannelUnassign(void)
 		UserApp1_StateMachine = UserApp1SM_Error;
 	}
 } /* end UserApp1SM_WaitChannelClose() */
+
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error (for now, do nothing) */
 static void UserApp1SM_Error(void)          
 {
-  
+	LedOn(RED);
 } /* end UserApp1SM_Error() */
 
 

@@ -49,8 +49,8 @@ Constants / Definitions
 #define ANT_FREQUENCY_USERAPP           (u8)50                // 2400MHz + this number 0 - 99
 #define ANT_TX_POWER_USERAPP            RADIO_TX_POWER_4DBM   // RADIO_TX_POWER_0DBM, RADIO_TX_POWER_MINUS5DBM, RADIO_TX_POWER_MINUS10DBM, RADIO_TX_POWER_MINUS20DBM
 
-#define TimeCount                       (u16)10                // 1000 means 1 second
-#define SeekTime                        (u16)60000
+#define TimeCount                       (u16)10                // 1 means 1 second
+#define SeekTime                        (u16)60                // 1 means 1 second
 /**********************************************************************************************************************
 Function Declarations
 **********************************************************************************************************************/
@@ -91,7 +91,6 @@ static void UserApp1SM_ChannelOpen_Slave(void);
 static void UserApp1SM_WaitChannelOpen(void);
 
 static void UserApp1SM_WaitChannelClose(void);
-static void UserApp1SM_WaitChannelUnassign(void);
 
 static void UserApp1SM_Error(void);
 
