@@ -704,14 +704,6 @@ static void UserApp1SM_ChannelOpen_Master(void)
 	}
 	
 	/*---------------Button Finish Game------------------*/
-	if( (u8State >= 2) || (u8State == 0) )
-	{
-		if(IsButtonHeld(BUTTON3, 2000))
-		{
-			u8State = 4;
-		}
-	}
-	
 	if(u8State == 4)
 	{
 		LedOffAll();
@@ -724,6 +716,14 @@ static void UserApp1SM_ChannelOpen_Master(void)
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP_MASTER);
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+	}
+	
+	if( (u8State >= 2) || (u8State == 0) )
+	{
+		if(IsButtonHeld(BUTTON3, 2000))
+		{
+			u8State = 4;
+		}
 	}
 	/*---------------------END-----------------------------*/
 }/* end UserApp1SM_ChannelOpen_Master() */
@@ -946,14 +946,6 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 	}
 	
 	/*---------------Button Finish Game------------------*/
-	if( (u8State >= 2) || (u8State == 0) )
-	{
-		if(IsButtonHeld(BUTTON3, 2000))
-		{
-			u8State = 4;
-		}
-	}
-	
 	if(u8State == 4)
 	{
 		LedOffAll();
@@ -967,6 +959,14 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP_SLAVE);
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+	}
+	
+	if( (u8State >= 2) || (u8State == 0) )
+	{
+		if(IsButtonHeld(BUTTON3, 2000))
+		{
+			u8State = 4;
+		}
 	}
 	/*---------------------END-----------------------------*/
 } /* end UserApp1SM_ChannelOpen_Slave() */
