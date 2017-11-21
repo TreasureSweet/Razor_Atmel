@@ -363,8 +363,6 @@ static void UserApp1SM_WaitChannelAssign(void)
 	/* Watch for time out */
 	if(IsTimeUp(&UserApp1_u32Timeout, 3000))
 	{
-		LedOn(RED);
-		
 		UserApp1_StateMachine = UserApp1SM_Error;    
 	}
 } /* end UserApp1SM_WaitChannelAssign */
@@ -718,7 +716,7 @@ static void UserApp1SM_ChannelOpen_Master(void)
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 	}
 	
-	if( (u8State >= 2) || (u8State == 0) )
+	if( (u8State == 0) || (u8State == 2) )
 	{
 		if(IsButtonHeld(BUTTON3, 2000))
 		{
@@ -961,7 +959,7 @@ static void UserApp1SM_ChannelOpen_Slave(void)
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 	}
 	
-	if( (u8State >= 2) || (u8State == 0) )
+	if( (u8State == 0) || (u8State == 2) )
 	{
 		if(IsButtonHeld(BUTTON3, 2000))
 		{
