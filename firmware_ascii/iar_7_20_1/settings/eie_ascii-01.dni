@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=-233304312
+Checksum=-769055896
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -24,6 +24,17 @@ CStepIntDis=_ 0
 TraceBufferSize=0x00010000
 TraceStallIfFIFOFull=0x00000000
 TracePortSize=0x00000000
+[array_types]
+Fmt0=u16[7]	4	0
+Fmt1=u32[7]	4	0
+Fmt2=u8[100]	3	0
+Fmt3=u8[2]	3	0
+[watch_formats]
+Fmt0={W}3:au8LedArray[u8Index]	3	0
+Fmt1={W}3:au8TestArray[1] + 48	3	0
+Fmt2={W}3:u8Count	3	0
+Fmt3={W}3:u8DefaultHR	3	0
+Fmt4={W}3:u8TsetHR	3	0
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""

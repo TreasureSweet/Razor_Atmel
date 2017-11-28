@@ -54,16 +54,82 @@ extern volatile u32 G_u32SystemTime1s;                 /* From board-specific so
 
 
 /***********************************************************************************************************************
+Global variable definitions with scope across entire project.
+All Global variable names shall start with "G_UserApp1"
+***********************************************************************************************************************/
+/* New variables */
+volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
+
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+/* Existing variables (defined in other files -- should all contain the "extern" keyword) */
+extern volatile u32 G_u32SystemFlags;                  /* From main.c */
+extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
+
+extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
+extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
+
+extern u32 G_u32AntApiCurrentMessageTimeStamp;                    /* From ant_api.c */
+extern AntApplicationMessageType G_eAntApiCurrentMessageClass;    /* From ant_api.c */
+extern u8 G_au8AntApiCurrentMessageBytes[ANT_APPLICATION_MESSAGE_BYTES];  /* From ant_api.c */
+extern AntExtendedDataType G_sAntApiCurrentMessageExtData;                /* From ant_api.c */
+
+
+
+/***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp1_" and be declared as static.
 ***********************************************************************************************************************/
 static fnCode_type UserApp1_StateMachine;            /* The state machine function pointer */
-//static u32 UserApp1_u32Timeout;                      /* Timeout counter used across states */
 
+static u32 UserApp1_u32Timeout;                        /* Timeout counter used across states */
+
+static AntAssignChannelInfoType UserApp1_sChannelInfo; /* ANT setup parameters */
+
+static bool bHRNeedInit;
+static u8 u8DefaultHR;
+static bool bLedIndicate;
 
 /**********************************************************************************************************************
 Function Definitions
 **********************************************************************************************************************/
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+/* Private functions                                                                                                  */
+/*--------------------------------------------------------------------------------------------------------------------*/
+static void HeartBeatLed(bool *pbLedIndicate)
+{
+	static u8 u8TimeCount = 0;
+	static u32 au32LedArray[] = {0x00090000,  //       C,G
+	                             0x000F0000,  //     B,C,G,Y
+	                             0x000FC000,  //   P,B,C,G,Y,O
+	                             0x001FE000,  // W,P,B,C,G,Y,O,R
+	                             0x000FC000,  //   P,B,C,G,Y,O
+	                             0x000F0000,  //     B,C,G,Y
+	                             0x00090000}; //       C,G
+	static u8 u8Index = 0;
+	
+	if(*pbLedIndicate)
+	{
+		u8TimeCount++;
+		
+		if(u8TimeCount == 40)
+		{
+			u8TimeCount = 0;
+			
+			u8Index++;
+		}
+		
+		AT91C_BASE_PIOB->PIO_SODR |= au32LedArray[u8Index];
+		
+		if(u8Index == 6)
+		{
+			u8Index = 0;
+			
+			*pbLedIndicate = FALSE;
+		}
+	}
+}
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
@@ -87,18 +153,48 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	/* Set bool to FALSE in addition to set */
+	bLedIndicate = FALSE;
+	
+	/* Set bool to TRUE in addition to set default HR */
+	bHRNeedInit = TRUE;
  
-  /* If good initialization, set state to Idle */
-  if( 1 )
-  {
-    UserApp1_StateMachine = UserApp1SM_Idle;
-  }
-  else
-  {
-    /* The task isn't properly initialized, so shut it down and don't run */
-    UserApp1_StateMachine = UserApp1SM_Error;
-  }
+	/* Network key variable */
+	static u8 au8ANT_NETWORK_KEY[] = {0xB9, 0xA5, 0x21, 0xFB, 0xBD, 0x72, 0xC3, 0x45};
+	
+	/* Configure ANT for this application */
+	UserApp1_sChannelInfo.AntChannel          = ANT_CHANNEL_USERAPP;
+	UserApp1_sChannelInfo.AntChannelType      = ANT_CHANNEL_TYPE_USERAPP;
+	UserApp1_sChannelInfo.AntChannelPeriodLo  = ANT_CHANNEL_PERIOD_LO_USERAPP;
+	UserApp1_sChannelInfo.AntChannelPeriodHi  = ANT_CHANNEL_PERIOD_HI_USERAPP;
 
+	UserApp1_sChannelInfo.AntDeviceIdLo       = ANT_DEVICEID_LO_USERAPP;
+	UserApp1_sChannelInfo.AntDeviceIdHi       = ANT_DEVICEID_HI_USERAPP;
+	UserApp1_sChannelInfo.AntDeviceType       = ANT_DEVICE_TYPE_USERAPP;
+	UserApp1_sChannelInfo.AntTransmissionType = ANT_TRANSMISSION_TYPE_USERAPP;
+	UserApp1_sChannelInfo.AntFrequency        = ANT_FREQUENCY_USERAPP;
+	UserApp1_sChannelInfo.AntTxPower          = ANT_TX_POWER_USERAPP;
+
+	UserApp1_sChannelInfo.AntNetwork = ANT_NETWORK_DEFAULT;
+	
+	for( u8 i = 0; i < ANT_NETWORK_NUMBER_BYTES; i++ )
+	{
+		UserApp1_sChannelInfo.AntNetworkKey[i] = au8ANT_NETWORK_KEY[i];
+	}
+
+	/* Attempt to queue the ANT channel setup */
+	if( AntAssignChannel(&UserApp1_sChannelInfo) )
+	{
+		UserApp1_u32Timeout = G_u32SystemTime1ms;
+		UserApp1_StateMachine = UserApp1SM_WaitChannelAssign;
+	}
+	else
+	{
+		/* The task isn't properly initialized, so shut it down and don't run */
+		DebugPrintf("Initialize Time Out\n\r");
+		
+		UserApp1_StateMachine = UserApp1SM_Error;
+	}
 } /* end UserApp1Initialize() */
 
   
@@ -133,18 +229,164 @@ State Machine Function Definitions
 **********************************************************************************************************************/
 
 /*-------------------------------------------------------------------------------------------------------------------*/
-/* Wait for ??? */
+/* Idle */
 static void UserApp1SM_Idle(void)
 {
-
+	/* Do once to set default HR */
+	if(bHRNeedInit)
+	{
+		AntOpenChannelNumber(ANT_CHANNEL_USERAPP);
+		
+		UserApp1_u32Timeout = G_u32SystemTime1ms;
+		UserApp1_StateMachine = UserApp1SM_WaitChannelOpen;
+	}
+	else
+	{
+	}
 } /* end UserApp1SM_Idle() */
-    
+
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* channel opened */
+static void UserApp1SM_ChannelOpen(void)
+{
+	if(AntReadAppMessageBuffer())
+	{
+		/* Start AntReadAppMessageBuffer() */
+		if(G_eAntApiCurrentMessageClass == ANT_DATA)
+		{
+		}
+		
+		if(G_eAntApiCurrentMessageClass == ANT_TICK)
+		{
+		}
+	} /* End AntReadAppMessageBuffer() */
+} /* end UserApp1SM_ChannelOpen */
+
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Set default HR */
+static void UserApp1SM_SetDefaultHR(void)
+{
+	static u8 u8TestHR = 0;
+	static u8 u8TestHB = 0;
+	static u8 u8Count = 0;
+	static u16 u16HRCount = 0;
+	
+	if(u8Count < TestTimes)
+	{
+		/* Start AntReadAppMessageBuffer() */
+		if(AntReadAppMessageBuffer())
+		{
+			if(G_eAntApiCurrentMessageClass == ANT_DATA)
+			{
+				if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
+				{
+					u16HRCount += G_au8AntApiCurrentMessageBytes[7];
+					u8TestHR = G_au8AntApiCurrentMessageBytes[7];
+					u8Count++;
+				}
+				
+				if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
+				{
+					u8TestHB = G_au8AntApiCurrentMessageBytes[6];
+					
+					bLedIndicate = TRUE;
+				}
+			}
+			
+			if(G_eAntApiCurrentMessageClass == ANT_TICK)
+			{
+			}
+		} /* End AntReadAppMessageBuffer() */
+	}
+	else
+	{
+		bHRNeedInit = FALSE;
+		u8DefaultHR = u16HRCount / TestTimes;
+		
+		AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
+		
+		UserApp1_u32Timeout = G_u32SystemTime1ms;
+		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+	}
+	
+	HeartBeatLed(&bLedIndicate);
+} /* end UserApp1SM_SetDefaultHR */
+
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Wait for channel assign */
+static void UserApp1SM_WaitChannelAssign(void)
+{
+	if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_CONFIGURED)
+	{
+		UserApp1_StateMachine = UserApp1SM_Idle;
+	}
+	
+	/* Watch for timeout */
+	if(IsTimeUp(&UserApp1_u32Timeout, ANT_CHANNEL_TIMEOUT_UERAPP))
+	{
+		/* Assign failed */
+		DebugPrintf("Assign Time Out\n\r");
+
+		UserApp1_StateMachine = UserApp1SM_Error;
+	}
+} /* end UserApp1SM_WaitChannelAssign()*/
+
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Wait for channel open */
+static void UserApp1SM_WaitChannelOpen(void)
+{
+	if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_OPEN)
+	{
+		if(bHRNeedInit)
+		{
+			UserApp1_StateMachine = UserApp1SM_SetDefaultHR;
+		}
+		else
+		{
+			UserApp1_StateMachine = UserApp1SM_ChannelOpen;
+		}
+	}
+	
+	/* Watch for timeout */
+	if(IsTimeUp(&UserApp1_u32Timeout, ANT_CHANNEL_TIMEOUT_UERAPP))
+	{
+		/* Open channel failed */
+		DebugPrintf("Open Time Out\n\r");
+		
+		UserApp1_StateMachine = UserApp1SM_Error;
+	}
+} /* end UserApp1SM_WaitChannelOpen */
+
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Wait for channel close */
+static void UserApp1SM_WaitChannelClose(void)
+{
+	if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_CLOSED)
+	{
+		UserApp1_StateMachine = UserApp1SM_Idle;
+	}
+	
+	/* Watch for timeout */
+	if(IsTimeUp(&UserApp1_u32Timeout, ANT_CHANNEL_TIMEOUT_UERAPP))
+	{
+		/* Close channel failed */
+		DebugPrintf("Close Time Out\n\r");
+		
+		UserApp1_StateMachine = UserApp1SM_Error;
+	}
+} /* end UserApp1SM_WaitChannelClose */
+
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
 static void UserApp1SM_Error(void)          
 {
-  
+	LedOn(RED);
 } /* end UserApp1SM_Error() */
 
 
