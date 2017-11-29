@@ -109,7 +109,7 @@ Requires:
          - Needs to be run every time.
 
 Warning:
-         - Display led once need about 300ms, so if the bpm > 200, the Dispaly may be wrong.
+         - Display led once need about 250ms, so if the bpm > 200, the Dispaly may be wrong.
 */
 static void HeartBeatLed(bool *pbLedIndicate)
 {
@@ -139,7 +139,7 @@ static void HeartBeatLed(bool *pbLedIndicate)
 	{
 		u8TimeCount++;
 		
-		if(u8TimeCount == 40)
+		if(u8TimeCount == 35)
 		{
 			u8TimeCount = 0;
 			
@@ -267,6 +267,10 @@ static void UserApp1SM_Idle(void)
 		if(WasButtonPressed(BUTTON0))
 		{
 			ButtonAcknowledge(BUTTON0);
+			
+			AntOpenChannelNumber(ANT_CHANNEL_USERAPP);
+			UserApp1_u32Timeout = G_u32SystemTime1ms;
+			UserApp1_StateMachine = UserApp1SM_WaitChannelOpen;
 		}
 		
 		if(WasButtonPressed(BUTTON1))
@@ -286,14 +290,8 @@ static void UserApp1SM_Idle(void)
 		/*----- End Button Control -----*/
 	}
 	else // Do once to set default HR
-	{
-		LCDCommand(LCD_CLEAR_CMD);
-		                           /*01234567890123456789*/
-		LCDMessage(LINE1_START_ADDR,"Open your HRM, wait ");
-		LCDMessage(LINE2_START_ADDR,"for initialization. ");
-		
+	{	
 		AntOpenChannelNumber(ANT_CHANNEL_USERAPP);
-		
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelOpen;
 	}
@@ -305,17 +303,72 @@ static void UserApp1SM_Idle(void)
 /* channel opened */
 static void UserApp1SM_ChannelOpen(void)
 {
-	if(AntReadAppMessageBuffer())
+	static u8 u8TestHR = 0;
+	static u8 u8TestHB = 0;
+	static u8 u8TestDefaultHR = 0;
+	static u8 au8TestDefaultHR[3];
+	static u8 au8TestHR[3];
+	bool bButton0Press = FALSE;
+	
+	if(WasButtonPressed(BUTTON0))
 	{
-		/* Start AntReadAppMessageBuffer() */
-		if(G_eAntApiCurrentMessageClass == ANT_DATA)
+		ButtonAcknowledge(BUTTON0);
+		
+		bButton0Press = TRUE;
+		u8TestHR = 0;
+		u8TestHB = 0;
+		u8TestDefaultHR = 0;
+		
+		AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
+		UserApp1_u32Timeout = G_u32SystemTime1ms;
+		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
+	}
+	
+	if(!bButton0Press)
+	{
+		if(u8TestDefaultHR != u8DefaultHR)
 		{
+			u8TestDefaultHR = u8DefaultHR;
+			
+			au8TestDefaultHR[0] = u8TestDefaultHR / 100 +48;
+			au8TestDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
+			au8TestDefaultHR[2] = u8TestDefaultHR % 10 +48;
+			
+			LCDMessage(LINE2_START_ADDR + 6,au8TestDefaultHR);
 		}
 		
-		if(G_eAntApiCurrentMessageClass == ANT_TICK)
+		if(AntReadAppMessageBuffer())
 		{
-		}
-	} /* End AntReadAppMessageBuffer() */
+			/* Start AntReadAppMessageBuffer() */
+			if(G_eAntApiCurrentMessageClass == ANT_DATA)
+			{
+				if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
+				{
+					u8TestHR = G_au8AntApiCurrentMessageBytes[7];
+					
+					au8TestHR[0] = u8TestHR / 100 +48;
+					au8TestHR[1] = (u8TestHR / 10) % 10 +48;
+					au8TestHR[2] = u8TestHR % 10 +48;
+					
+					LCDMessage(LINE2_START_ADDR + 16,au8TestHR);
+				}
+				
+				if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
+				{
+					u8TestHB = G_au8AntApiCurrentMessageBytes[6];
+					
+					bLedIndicate = TRUE;
+				}
+			}
+			
+			if(G_eAntApiCurrentMessageClass == ANT_TICK)
+			{
+			}
+		} /* End AntReadAppMessageBuffer() */
+	}
+	
+	/* Hear Beat Led Display */
+	HeartBeatLed(&bLedIndicate);
 	
 } /* end UserApp1SM_ChannelOpen */
 
@@ -382,10 +435,14 @@ static void UserApp1SM_SetDefaultHR(void)
 	}
 	else // Calculate mean value and set it as default HR: u8DefaultHR
 	{
+		LCDCommand(LCD_CLEAR_CMD);
+						           /*01234567890123456789*/
+		LCDMessage(LINE1_START_ADDR,"Equipment state: OFF");
+		LCDMessage(LINE2_START_ADDR,"BUT0 Control ON/OFF ");
+		
 		u8DefaultHR = u16HRCount / DefaultTimes;
 		
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
-		
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 	}
@@ -423,13 +480,23 @@ static void UserApp1SM_WaitChannelOpen(void)
 {
 	if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_OPEN)
 	{
-		if(bHRNeedInit)
+		if(!bHRNeedInit)
 		{
-			UserApp1_StateMachine = UserApp1SM_SetDefaultHR;
+			LCDCommand(LCD_CLEAR_CMD);
+									   /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"Equipment state: ON ");
+			LCDMessage(LINE2_START_ADDR,"HR(D):    HR(N):    ");
+			
+			UserApp1_StateMachine = UserApp1SM_ChannelOpen;
 		}
 		else
 		{
-			UserApp1_StateMachine = UserApp1SM_ChannelOpen;
+			LCDCommand(LCD_CLEAR_CMD);
+								       /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"Open your HRM, wait ");
+			LCDMessage(LINE2_START_ADDR,"for initialization. ");
+		
+			UserApp1_StateMachine = UserApp1SM_SetDefaultHR;
 		}
 	}
 	
@@ -451,6 +518,11 @@ static void UserApp1SM_WaitChannelClose(void)
 {
 	if(AntRadioStatusChannel(ANT_CHANNEL_USERAPP) == ANT_CLOSED)
 	{
+		LCDCommand(LCD_CLEAR_CMD);
+						           /*01234567890123456789*/
+		LCDMessage(LINE1_START_ADDR,"Equipment state: OFF");
+		LCDMessage(LINE2_START_ADDR,"BUT0 Control ON/OFF ");
+		
 		UserApp1_StateMachine = UserApp1SM_Idle;
 	}
 	

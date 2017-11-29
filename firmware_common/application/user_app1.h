@@ -42,7 +42,7 @@ Type Definitions
 #define ANT_TX_POWER_USERAPP            RADIO_TX_POWER_4DBM   // RADIO_TX_POWER_0DBM, RADIO_TX_POWER_MINUS5DBM, RADIO_TX_POWER_MINUS10DBM, RADIO_TX_POWER_MINUS20DBM
 #define ANT_CHANNEL_TIMEOUT_UERAPP      (u16)3000             // After this time channel is not opened or closed, it gose wrong
 
-#define DefaultTimes (u8)30                                      // default HR test times (can't >=100)
+#define DefaultTimes (u8)10                                      // default HR test times (can't >=100)
 /**********************************************************************************************************************
 Constants / Definitions
 **********************************************************************************************************************/
