@@ -97,9 +97,25 @@ Function Definitions
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
 /*--------------------------------------------------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------------------------------------------------
+Function: HeartBeatLed
+
+Description:
+If the bool is TRUE, display led like heart beat once and set bool to FALSE.
+
+Requires:
+         - Needs a bool address.
+         - Needs to be run every time.
+
+Warning:
+         - Display led once need about 300ms, so if the bpm > 200, the Dispaly may be wrong.
+*/
 static void HeartBeatLed(bool *pbLedIndicate)
 {
+	/*--------------------           Variables          -----------------*/
 	static u8 u8TimeCount = 0;
+	static bool* pbAddrTest = NULL;
 	static u32 au32LedArray[] = {0x00090000,  //       C,G
 	                             0x000F0000,  //     B,C,G,Y
 	                             0x000FC000,  //   P,B,C,G,Y,O
@@ -108,7 +124,17 @@ static void HeartBeatLed(bool *pbLedIndicate)
 	                             0x000F0000,  //     B,C,G,Y
 	                             0x00090000}; //       C,G
 	static u8 u8Index = 0;
+	/*-------------------------------------------------------------------*/
 	
+	/* If Addr change, initialize the variables */
+	if(pbAddrTest != pbLedIndicate)
+	{
+		pbAddrTest = pbLedIndicate;
+		u8Index = 0;
+		u8TimeCount = 0;
+	} /* End initialize */
+	
+	/* Dislay led if *pbLedIndicate == TRUE, and set FALSE to stop this function */
 	if(*pbLedIndicate)
 	{
 		u8TimeCount++;
@@ -128,8 +154,9 @@ static void HeartBeatLed(bool *pbLedIndicate)
 			
 			*pbLedIndicate = FALSE;
 		}
-	}
-}
+	} /* End display */
+	
+} /* End Function: HeartBeatLed */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
@@ -153,7 +180,7 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
-	/* Set bool to FALSE in addition to set */
+	/* Set bool to FALSE in addition to Display the HeartBeat led */
 	bLedIndicate = FALSE;
 	
 	/* Set bool to TRUE in addition to set default HR */
@@ -195,6 +222,7 @@ void UserApp1Initialize(void)
 		
 		UserApp1_StateMachine = UserApp1SM_Error;
 	}
+	
 } /* end UserApp1Initialize() */
 
   
@@ -215,7 +243,7 @@ Promises:
 void UserApp1RunActiveState(void)
 {
   UserApp1_StateMachine();
-
+  
 } /* end UserApp1RunActiveState */
 
 
@@ -232,17 +260,44 @@ State Machine Function Definitions
 /* Idle */
 static void UserApp1SM_Idle(void)
 {
-	/* Do once to set default HR */
-	if(bHRNeedInit)
+	/* Functions need to be written in if, not else */
+	if(!bHRNeedInit)
 	{
+		/*------- Button Control -------*/
+		if(WasButtonPressed(BUTTON0))
+		{
+			ButtonAcknowledge(BUTTON0);
+		}
+		
+		if(WasButtonPressed(BUTTON1))
+		{
+			ButtonAcknowledge(BUTTON1);
+		}
+		
+		if(WasButtonPressed(BUTTON2))
+		{
+			ButtonAcknowledge(BUTTON2);
+		}
+		
+		if(WasButtonPressed(BUTTON3))
+		{
+			ButtonAcknowledge(BUTTON3);
+		}
+		/*----- End Button Control -----*/
+	}
+	else // Do once to set default HR
+	{
+		LCDCommand(LCD_CLEAR_CMD);
+		                           /*01234567890123456789*/
+		LCDMessage(LINE1_START_ADDR,"Open your HRM, wait ");
+		LCDMessage(LINE2_START_ADDR,"for initialization. ");
+		
 		AntOpenChannelNumber(ANT_CHANNEL_USERAPP);
 		
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelOpen;
 	}
-	else
-	{
-	}
+	
 } /* end UserApp1SM_Idle() */
 
 
@@ -261,6 +316,7 @@ static void UserApp1SM_ChannelOpen(void)
 		{
 		}
 	} /* End AntReadAppMessageBuffer() */
+	
 } /* end UserApp1SM_ChannelOpen */
 
 
@@ -270,21 +326,38 @@ static void UserApp1SM_SetDefaultHR(void)
 {
 	static u8 u8TestHR = 0;
 	static u8 u8TestHB = 0;
-	static u8 u8Count = 0;
+	static u8 u8TimesCount = 0;
+	static u8 au8TimesCountDown[2];
 	static u16 u16HRCount = 0;
 	
-	if(u8Count < TestTimes)
+	/* Count <DefaultTimes> times, add to sum: u16HRCount */
+	if(u8TimesCount < DefaultTimes)
 	{
 		/* Start AntReadAppMessageBuffer() */
 		if(AntReadAppMessageBuffer())
 		{
+			/* Display new message on lcd */
+			if(bHRNeedInit)
+			{
+				bHRNeedInit = FALSE;
+				LCDCommand(LCD_CLEAR_CMD);
+										   /*01234567890123456789*/
+				LCDMessage(LINE1_START_ADDR,"Device initializing.");
+				LCDMessage(LINE2_START_ADDR,"Please wait.        ");
+			} /* End display */
+				
 			if(G_eAntApiCurrentMessageClass == ANT_DATA)
 			{
 				if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
 				{
+					u8TimesCount++;
+					
 					u16HRCount += G_au8AntApiCurrentMessageBytes[7];
 					u8TestHR = G_au8AntApiCurrentMessageBytes[7];
-					u8Count++;
+					
+					au8TimesCountDown[0] = (DefaultTimes - u8TimesCount) / 10 +48;
+					au8TimesCountDown[1] = (DefaultTimes - u8TimesCount) % 10 +48;
+					LCDMessage(LINE2_START_ADDR+18,au8TimesCountDown);
 				}
 				
 				if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
@@ -296,14 +369,20 @@ static void UserApp1SM_SetDefaultHR(void)
 			}
 			
 			if(G_eAntApiCurrentMessageClass == ANT_TICK)
-			{
+			{	
+				if(G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX] == EVENT_RX_FAIL)
+				{
+				}
+				
+				if(G_au8AntApiCurrentMessageBytes[ANT_TICK_MSG_EVENT_CODE_INDEX] == EVENT_RX_FAIL_GO_TO_SEARCH)
+				{
+				}
 			}
 		} /* End AntReadAppMessageBuffer() */
 	}
-	else
+	else // Calculate mean value and set it as default HR: u8DefaultHR
 	{
-		bHRNeedInit = FALSE;
-		u8DefaultHR = u16HRCount / TestTimes;
+		u8DefaultHR = u16HRCount / DefaultTimes;
 		
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
 		
@@ -311,7 +390,9 @@ static void UserApp1SM_SetDefaultHR(void)
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 	}
 	
+	/* Hear Beat Led Display */
 	HeartBeatLed(&bLedIndicate);
+	
 } /* end UserApp1SM_SetDefaultHR */
 
 
@@ -332,6 +413,7 @@ static void UserApp1SM_WaitChannelAssign(void)
 
 		UserApp1_StateMachine = UserApp1SM_Error;
 	}
+	
 } /* end UserApp1SM_WaitChannelAssign()*/
 
 
@@ -359,6 +441,7 @@ static void UserApp1SM_WaitChannelOpen(void)
 		
 		UserApp1_StateMachine = UserApp1SM_Error;
 	}
+	
 } /* end UserApp1SM_WaitChannelOpen */
 
 
@@ -379,6 +462,7 @@ static void UserApp1SM_WaitChannelClose(void)
 		
 		UserApp1_StateMachine = UserApp1SM_Error;
 	}
+	
 } /* end UserApp1SM_WaitChannelClose */
 
 
@@ -387,6 +471,7 @@ static void UserApp1SM_WaitChannelClose(void)
 static void UserApp1SM_Error(void)          
 {
 	LedOn(RED);
+	
 } /* end UserApp1SM_Error() */
 
 

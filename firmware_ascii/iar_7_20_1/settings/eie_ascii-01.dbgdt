@@ -106,7 +106,7 @@
         <expressions>
           
           
-        <item>u8DefaultHR</item><item>u8Count</item><item>G_eAntApiCurrentMessageClass</item><item>au32LedArray</item><item>bLedIndicate</item><item></item></expressions>
+        <item>u8DefaultHR</item><item>u8Count</item><item>G_eAntApiCurrentMessageClass</item><item>au32LedArray</item><item>bLedIndicate</item><item/></expressions>
         <col-names>
           
           
