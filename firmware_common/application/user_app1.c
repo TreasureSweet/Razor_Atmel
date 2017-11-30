@@ -308,67 +308,139 @@ static void UserApp1SM_ChannelOpen(void)
 	static u8 u8TestDefaultHR = 0;
 	static u8 au8TestDefaultHR[3];
 	static u8 au8TestHR[3];
-	bool bButton0Press = FALSE;
+	static u8 u8State = 0;
+	static u16 u16DefaultHRRefreshSum = 0;
+	static u8 u8HRChangeCount = 0;
+	u8 u8DValue = 0;
 	
+	if(u8TestDefaultHR != u8DefaultHR)
+	{
+		u8TestDefaultHR = u8DefaultHR;
+		
+		au8TestDefaultHR[0] = u8TestDefaultHR / 100 +48;
+		au8TestDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
+		au8TestDefaultHR[2] = u8TestDefaultHR % 10 +48;
+		
+		LCDMessage(LINE2_START_ADDR + 6,au8TestDefaultHR);
+	}
+		
+	if(AntReadAppMessageBuffer())
+	{
+		/* Start AntReadAppMessageBuffer() */
+		if(G_eAntApiCurrentMessageClass == ANT_DATA)
+		{
+			if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
+			{
+				u8TestHR = G_au8AntApiCurrentMessageBytes[7];
+				u8HRChangeCount++;
+				u16DefaultHRRefreshSum += u8TestHR;
+				u8DValue = abs(u8TestHR - u8DefaultHR);
+				
+				au8TestHR[0] = u8TestHR / 100 +48;
+				au8TestHR[1] = (u8TestHR / 10) % 10 +48;
+				au8TestHR[2] = u8TestHR % 10 +48;
+				
+				LCDMessage(LINE2_START_ADDR + 16,au8TestHR);
+				
+				if(u8DValue < 20)      // WHITE
+				{
+					if(u8State != 0)
+					{
+						u8State = 0;
+						
+						LedPWM(LCD_RED, LED_PWM_100);
+						LedPWM(LCD_GREEN, LED_PWM_100);
+						LedPWM(LCD_BLUE, LED_PWM_100);
+					}
+				}
+				else if(u8DValue < 30) // BLUE
+				{
+					if(u8State != 1)
+					{
+						u8State = 1;
+						
+						LedPWM(LCD_RED, LED_PWM_10);
+						LedPWM(LCD_GREEN, LED_PWM_10);
+						LedPWM(LCD_BLUE, LED_PWM_100);
+					}
+				}
+				else if(u8DValue < 40) // YELLOW
+				{
+					if(u8State != 2)
+					{
+						u8State = 2;
+						
+						LedPWM(LCD_RED, LED_PWM_100);
+						LedPWM(LCD_GREEN, LED_PWM_90);
+						LedPWM(LCD_BLUE, LED_PWM_0);
+					}
+				}
+				else if(u8DValue < 50) // ORANGE
+				{
+					if(u8State != 3)
+					{
+						u8State = 3;
+						
+						LedPWM(LCD_RED, LED_PWM_100);
+						LedPWM(LCD_GREEN, LED_PWM_20);
+						LedPWM(LCD_BLUE, LED_PWM_10);
+					}
+				}
+				else                   // RED
+				{
+					if(u8State != 4)
+					{
+						u8State = 4;
+						
+						LedPWM(LCD_RED, LED_PWM_100);
+						LedPWM(LCD_GREEN, LED_PWM_0);
+						LedPWM(LCD_BLUE, LED_PWM_0);
+					}
+				}
+			}
+			
+			if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
+			{
+				u8TestHB = G_au8AntApiCurrentMessageBytes[6];
+				
+				bLedIndicate = TRUE;
+			}
+		}
+		
+		if(G_eAntApiCurrentMessageClass == ANT_TICK)
+		{
+		}
+	} /* End AntReadAppMessageBuffer() */
+		
+	/* Heart Default Rate refresh */
+	if(u8HRChangeCount == 30)
+	{
+		u8DefaultHR = u16DefaultHRRefreshSum / u8HRChangeCount;
+		u16DefaultHRRefreshSum = 0;
+		u8HRChangeCount = 0;
+	}
+	
+	/* Heart Beat Led Display */
+//	HeartBeatLed(&bLedIndicate);
+	
+	/* Button0 quit */
 	if(WasButtonPressed(BUTTON0))
 	{
 		ButtonAcknowledge(BUTTON0);
 		
-		bButton0Press = TRUE;
+		LedPWM(LCD_RED, LED_PWM_100);
+		LedPWM(LCD_GREEN, LED_PWM_100);
+		LedPWM(LCD_BLUE, LED_PWM_100);
+		
 		u8TestHR = 0;
 		u8TestHB = 0;
 		u8TestDefaultHR = 0;
+		u8State = 0;
 		
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
 		UserApp1_StateMachine = UserApp1SM_WaitChannelClose;
 	}
-	
-	if(!bButton0Press)
-	{
-		if(u8TestDefaultHR != u8DefaultHR)
-		{
-			u8TestDefaultHR = u8DefaultHR;
-			
-			au8TestDefaultHR[0] = u8TestDefaultHR / 100 +48;
-			au8TestDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
-			au8TestDefaultHR[2] = u8TestDefaultHR % 10 +48;
-			
-			LCDMessage(LINE2_START_ADDR + 6,au8TestDefaultHR);
-		}
-		
-		if(AntReadAppMessageBuffer())
-		{
-			/* Start AntReadAppMessageBuffer() */
-			if(G_eAntApiCurrentMessageClass == ANT_DATA)
-			{
-				if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
-				{
-					u8TestHR = G_au8AntApiCurrentMessageBytes[7];
-					
-					au8TestHR[0] = u8TestHR / 100 +48;
-					au8TestHR[1] = (u8TestHR / 10) % 10 +48;
-					au8TestHR[2] = u8TestHR % 10 +48;
-					
-					LCDMessage(LINE2_START_ADDR + 16,au8TestHR);
-				}
-				
-				if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
-				{
-					u8TestHB = G_au8AntApiCurrentMessageBytes[6];
-					
-					bLedIndicate = TRUE;
-				}
-			}
-			
-			if(G_eAntApiCurrentMessageClass == ANT_TICK)
-			{
-			}
-		} /* End AntReadAppMessageBuffer() */
-	}
-	
-	/* Hear Beat Led Display */
-	HeartBeatLed(&bLedIndicate);
 	
 } /* end UserApp1SM_ChannelOpen */
 
@@ -448,7 +520,7 @@ static void UserApp1SM_SetDefaultHR(void)
 	}
 	
 	/* Hear Beat Led Display */
-	HeartBeatLed(&bLedIndicate);
+//	HeartBeatLed(&bLedIndicate);
 	
 } /* end UserApp1SM_SetDefaultHR */
 
