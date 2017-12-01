@@ -67,6 +67,7 @@ void UserApp1RunActiveState(void);
 /* Private functions                                                                                                  */
 /*--------------------------------------------------------------------------------------------------------------------*/
 static void HeartBeatLed(bool*);
+static void HRDebugDisplay(u8);
 
 /***********************************************************************************************************************
 State Machine Declarations

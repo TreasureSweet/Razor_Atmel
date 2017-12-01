@@ -158,6 +158,83 @@ static void HeartBeatLed(bool *pbLedIndicate)
 	
 } /* End Function: HeartBeatLed */
 
+
+/*--------------------------------------------------------------------------------------------------------------------
+Function: HeartBeatLed
+
+Description:
+Print '*' to display rate on debug
+
+Requires:
+         - Needs a HR.
+
+Warning:
+         -
+*/
+static void HRDebugDisplay(u8 u8HeartRate)
+{
+	if(u8HeartRate < 50)
+	{
+		DebugPrintf("*****\r\n");
+	}
+	else if(u8HeartRate < 60)
+	{
+		DebugPrintf("******\r\n");
+	}
+	else if(u8HeartRate < 70)
+	{
+		DebugPrintf("*******\r\n");
+	}
+	else if(u8HeartRate < 80)
+	{
+		DebugPrintf("********\r\n");
+	}
+	else if(u8HeartRate < 90)
+	{
+		DebugPrintf("*********\r\n");
+	}
+	else if(u8HeartRate < 110)
+	{
+		DebugPrintf("***********\r\n");
+	}
+	else if(u8HeartRate < 120)
+	{
+		DebugPrintf("************\r\n");
+	}
+	else if(u8HeartRate < 130)
+	{
+		DebugPrintf("*************\r\n");
+	}
+	else if(u8HeartRate < 140)
+	{
+		DebugPrintf("**************\r\n");
+	}
+	else if(u8HeartRate < 150)
+	{
+		DebugPrintf("***************\r\n");
+	}
+	else if(u8HeartRate < 160)
+	{
+		DebugPrintf("****************\r\n");
+	}
+	else if(u8HeartRate < 170)
+	{
+		DebugPrintf("*****************\r\n");
+	}
+	else if(u8HeartRate < 180)
+	{
+		DebugPrintf("******************\r\n");
+	}
+	else if(u8HeartRate < 190)
+	{
+		DebugPrintf("*******************\r\n");
+	}
+	else if(u8HeartRate < 200)
+	{
+		DebugPrintf("********************\r\n");
+	}
+	
+} /* End Function: HeartBeatLed */
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -180,6 +257,11 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	PWMAudioOff(BUZZER1);
+	PWMAudioOff(BUZZER2);
+	PWMAudioSetFrequency(BUZZER1, 1000);
+	PWMAudioSetFrequency(BUZZER2, 1500);
+	
 	/* Set bool to FALSE in addition to Display the HeartBeat led */
 	bLedIndicate = FALSE;
 	
@@ -308,25 +390,20 @@ static void UserApp1SM_ChannelOpen(void)
 	static u8 u8TestDefaultHR = 0;
 	static u8 au8TestDefaultHR[3];
 	static u8 au8TestHR[3];
+	static u8 au8OverTimesCount[] = {'0', '0', '0'};
 	static u8 u8State = 0;
 	static u16 u16DefaultHRRefreshSum = 0;
 	static u8 u8HRChangeCount = 0;
+	static u16 u16DisplayTime = 0;
+	static u16 u16BuzzerTime = 0;
+	static bool bDisplay = FALSE;
+	static bool bLedEnabled = TRUE;
+	static bool bWarnOn = TRUE;
 	u8 u8DValue = 0;
 	
-	if(u8TestDefaultHR != u8DefaultHR)
-	{
-		u8TestDefaultHR = u8DefaultHR;
-		
-		au8TestDefaultHR[0] = u8TestDefaultHR / 100 +48;
-		au8TestDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
-		au8TestDefaultHR[2] = u8TestDefaultHR % 10 +48;
-		
-		LCDMessage(LINE2_START_ADDR + 6,au8TestDefaultHR);
-	}
-		
+	/*------------------- Start AntReadAppMessageBuffer() --------------------*/
 	if(AntReadAppMessageBuffer())
 	{
-		/* Start AntReadAppMessageBuffer() */
 		if(G_eAntApiCurrentMessageClass == ANT_DATA)
 		{
 			if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
@@ -342,61 +419,83 @@ static void UserApp1SM_ChannelOpen(void)
 				
 				LCDMessage(LINE2_START_ADDR + 16,au8TestHR);
 				
-				if(u8DValue < 20)      // WHITE
+				/* Warning states */
+				if(bWarnOn)
 				{
-					if(u8State != 0)
+					if(u8DValue < 20)      // WHITE
 					{
-						u8State = 0;
-						
-						LedPWM(LCD_RED, LED_PWM_100);
-						LedPWM(LCD_GREEN, LED_PWM_100);
-						LedPWM(LCD_BLUE, LED_PWM_100);
+						if(u8State != 0)
+						{
+							u8State = 0;
+							
+							LedPWM(LCD_RED, LED_PWM_100);
+							LedPWM(LCD_GREEN, LED_PWM_100);
+							LedPWM(LCD_BLUE, LED_PWM_100);
+						}
 					}
-				}
-				else if(u8DValue < 30) // BLUE
-				{
-					if(u8State != 1)
+					else if(u8DValue < 30) // BLUE
 					{
-						u8State = 1;
-						
-						LedPWM(LCD_RED, LED_PWM_10);
-						LedPWM(LCD_GREEN, LED_PWM_10);
-						LedPWM(LCD_BLUE, LED_PWM_100);
+						if(u8State != 1)
+						{
+							u8State = 1;
+							
+							LedPWM(LCD_RED, LED_PWM_10);
+							LedPWM(LCD_GREEN, LED_PWM_10);
+							LedPWM(LCD_BLUE, LED_PWM_100);
+						}
 					}
-				}
-				else if(u8DValue < 40) // YELLOW
-				{
-					if(u8State != 2)
+					else if(u8DValue < 40) // YELLOW
 					{
-						u8State = 2;
-						
-						LedPWM(LCD_RED, LED_PWM_100);
-						LedPWM(LCD_GREEN, LED_PWM_90);
-						LedPWM(LCD_BLUE, LED_PWM_0);
+						if(u8State != 2)
+						{
+							u8State = 2;
+							
+							LedPWM(LCD_RED, LED_PWM_100);
+							LedPWM(LCD_GREEN, LED_PWM_90);
+							LedPWM(LCD_BLUE, LED_PWM_0);
+						}
 					}
-				}
-				else if(u8DValue < 50) // ORANGE
-				{
-					if(u8State != 3)
+					else if(u8DValue < 50) // ORANGE
 					{
-						u8State = 3;
-						
-						LedPWM(LCD_RED, LED_PWM_100);
-						LedPWM(LCD_GREEN, LED_PWM_20);
-						LedPWM(LCD_BLUE, LED_PWM_10);
+						if(u8State != 3)
+						{
+							u8State = 3;
+							u16BuzzerTime = 0;
+							
+							LedPWM(LCD_RED, LED_PWM_100);
+							LedPWM(LCD_GREEN, LED_PWM_20);
+							LedPWM(LCD_BLUE, LED_PWM_10);
+						}
 					}
-				}
-				else                   // RED
-				{
-					if(u8State != 4)
+					else                   // RED
 					{
-						u8State = 4;
-						
-						LedPWM(LCD_RED, LED_PWM_100);
-						LedPWM(LCD_GREEN, LED_PWM_0);
-						LedPWM(LCD_BLUE, LED_PWM_0);
+						if(u8State != 4)
+						{
+							u8State = 4;
+							u16BuzzerTime = 0;
+							
+							LedPWM(LCD_RED, LED_PWM_100);
+							LedPWM(LCD_GREEN, LED_PWM_0);
+							LedPWM(LCD_BLUE, LED_PWM_0);
+							
+							/* Over Times Count */
+							if(++au8OverTimesCount[2] == '9'+1)
+							{
+								au8OverTimesCount[2] = '0';
+								
+								if(++au8OverTimesCount[1] == '9'+1)
+								{
+									au8OverTimesCount[1] = '0';
+									
+									if(++au8OverTimesCount[0] == '9'+1)
+									{
+										au8OverTimesCount[0] = '0';
+									}
+								}
+							} /* End Over Times Count */
+						}
 					}
-				}
+				} /* End warning states */
 			}
 			
 			if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
@@ -404,30 +503,190 @@ static void UserApp1SM_ChannelOpen(void)
 				u8TestHB = G_au8AntApiCurrentMessageBytes[6];
 				
 				bLedIndicate = TRUE;
+				
+				HRDebugDisplay(u8TestHR);
 			}
 		}
 		
 		if(G_eAntApiCurrentMessageClass == ANT_TICK)
 		{
 		}
-	} /* End AntReadAppMessageBuffer() */
+	}
+	/*----------------- End AntReadAppMessageBuffer() -----------------------*/
+	
+	/*---------------------- Button Function --------------------------------*/
+	
+	/* Display count over times */
+	if(WasButtonPressed(BUTTON1))
+	{
+		ButtonAcknowledge(BUTTON1);
+//		PWMAudioOnk(BUZZER1);
+		bDisplay = TRUE;
+		u16DisplayTime = 0;
 		
+		LCDClearChars(LINE1_START_ADDR, 20);
+								   /*01234567890123456789*/
+		LCDMessage(LINE1_START_ADDR,"HR Over Times  :    ");
+		LCDMessage(LINE1_START_ADDR + 16, au8OverTimesCount);
+	} /* END */
+	
+	/* Turn off warning */
+	if(WasButtonPressed(BUTTON2))
+	{
+		ButtonAcknowledge(BUTTON2);
+//		PWMAudioOn(BUZZER1);
+		bDisplay = TRUE;
+		u16DisplayTime = 0;
+		
+		LCDClearChars(LINE1_START_ADDR, 20);
+		
+		if(bWarnOn)
+		{
+			bWarnOn = FALSE;
+			u8State = 0;
+			u16BuzzerTime = 0;
+			PWMAudioOff(BUZZER2);
+			
+								       /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"Warn Display   :OFF ");
+			
+			LedPWM(LCD_RED, LED_PWM_100);
+			LedPWM(LCD_GREEN, LED_PWM_100);
+			LedPWM(LCD_BLUE, LED_PWM_100);
+		}
+		else
+		{
+			bWarnOn = TRUE;
+								       /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"Warn Display   : ON ");
+		}
+	}/* END */
+	
+	/* Turn off Led display */
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+//		PWMAudioOn(BUZZER1);
+		bDisplay = TRUE;
+		u16DisplayTime = 0;
+		
+		bLedEnabled = !bLedEnabled;
+		
+		LCDClearChars(LINE1_START_ADDR, 20);
+		
+		if(bLedEnabled)
+		{
+								       /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"HB Led Display : ON ");
+		}
+		else
+		{
+								       /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"HB Led Display :OFF ");
+		}
+	} /* END */
+	
+	/* Clear count over times */
+	if(IsButtonHeld(BUTTON1,1500))
+	{
+		au8OverTimesCount[0] = '0';
+		au8OverTimesCount[1] = '0';
+		au8OverTimesCount[2] = '0';
+		
+		if(u16DisplayTime == 2000)
+		{
+			LCDMessage(LINE1_START_ADDR + 16, au8OverTimesCount);
+		}
+	} /* END */
+	
+	if(bDisplay)
+	{
+		u16DisplayTime++;
+		
+		if(u16DisplayTime == 200)
+		{
+			PWMAudioOff(BUZZER1);
+		}
+		
+		if(u16DisplayTime == 3000)
+		{
+			LCDClearChars(LINE1_START_ADDR, 20);
+									   /*01234567890123456789*/
+			LCDMessage(LINE1_START_ADDR,"Equipment state: ON ");
+		}
+	}
+	/*------------------------ End Button -----------------------------------*/
+	
+	/*------------------------ DefaultHR Change ------------------------------*/
+	if(u8TestDefaultHR != u8DefaultHR)
+	{
+		u8TestDefaultHR = u8DefaultHR;
+		
+		au8TestDefaultHR[0] = u8TestDefaultHR / 100 +48;
+		au8TestDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
+		au8TestDefaultHR[2] = u8TestDefaultHR % 10 +48;
+		
+		LCDMessage(LINE2_START_ADDR + 6,au8TestDefaultHR);
+	}
+	
 	/* Heart Default Rate refresh */
-	if(u8HRChangeCount == 30)
+	if(u8HRChangeCount == 200)
 	{
 		u8DefaultHR = u16DefaultHRRefreshSum / u8HRChangeCount;
 		u16DefaultHRRefreshSum = 0;
 		u8HRChangeCount = 0;
 	}
+	/*--------------------------- End Change ---------------------------------*/
 	
 	/* Heart Beat Led Display */
-//	HeartBeatLed(&bLedIndicate);
+	if(bLedEnabled)
+	{
+		HeartBeatLed(&bLedIndicate);
+	}
+	
+	/* Buzzer */
+	if( (u8State >= 3) && bWarnOn )
+	{
+		if(u16BuzzerTime++ == 0)
+		{
+			PWMAudioOn(BUZZER2);
+		}
+		else
+		{
+			if(u8State == 3)
+			{
+				if(u16BuzzerTime == 1000)
+				{
+					PWMAudioOff(BUZZER2);
+				}
+				
+				if(u16BuzzerTime == 2000)
+				{
+					u16BuzzerTime = 0;
+				}
+			}
+			
+			if(u8State == 4)
+			{
+				if(u16BuzzerTime == 500)
+				{
+					PWMAudioOff(BUZZER2);
+				}
+				
+				if(u16BuzzerTime == 1000)
+				{
+					u16BuzzerTime = 0;
+				}
+			}
+		}
+	} /* End Buzzer */
 	
 	/* Button0 quit */
 	if(WasButtonPressed(BUTTON0))
 	{
 		ButtonAcknowledge(BUTTON0);
 		
+		PWMAudioOff(BUZZER2);
 		LedPWM(LCD_RED, LED_PWM_100);
 		LedPWM(LCD_GREEN, LED_PWM_100);
 		LedPWM(LCD_BLUE, LED_PWM_100);
@@ -436,6 +695,8 @@ static void UserApp1SM_ChannelOpen(void)
 		u8TestHB = 0;
 		u8TestDefaultHR = 0;
 		u8State = 0;
+		u16BuzzerTime = 0;
+		bDisplay = FALSE;
 		
 		AntCloseChannelNumber(ANT_CHANNEL_USERAPP);
 		UserApp1_u32Timeout = G_u32SystemTime1ms;
@@ -509,8 +770,8 @@ static void UserApp1SM_SetDefaultHR(void)
 	{
 		LCDCommand(LCD_CLEAR_CMD);
 						           /*01234567890123456789*/
-		LCDMessage(LINE1_START_ADDR,"Equipment state: OFF");
-		LCDMessage(LINE2_START_ADDR,"BUT0 Control ON/OFF ");
+		LCDMessage(LINE1_START_ADDR,"Equipment state:OFF ");
+		LCDMessage(LINE2_START_ADDR,"BUT0:Control ON/OFF ");
 		
 		u8DefaultHR = u16HRCount / DefaultTimes;
 		
@@ -520,7 +781,7 @@ static void UserApp1SM_SetDefaultHR(void)
 	}
 	
 	/* Hear Beat Led Display */
-//	HeartBeatLed(&bLedIndicate);
+	HeartBeatLed(&bLedIndicate);
 	
 } /* end UserApp1SM_SetDefaultHR */
 
@@ -592,8 +853,8 @@ static void UserApp1SM_WaitChannelClose(void)
 	{
 		LCDCommand(LCD_CLEAR_CMD);
 						           /*01234567890123456789*/
-		LCDMessage(LINE1_START_ADDR,"Equipment state: OFF");
-		LCDMessage(LINE2_START_ADDR,"BUT0 Control ON/OFF ");
+		LCDMessage(LINE1_START_ADDR,"Equipment state:OFF ");
+		LCDMessage(LINE2_START_ADDR,"BUT0:Control ON/OFF ");
 		
 		UserApp1_StateMachine = UserApp1SM_Idle;
 	}
