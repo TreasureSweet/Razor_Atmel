@@ -102,7 +102,7 @@ Function Definitions
 Function: HeartBeatLed
 
 Description:
-If the bool is TRUE, display led like heart beat once and set bool to FALSE.
+If the bool(*pbLedIndicate) is TRUE, display led like heart beat once and set bool to FALSE.
 
 Requires:
          - Needs a bool address.
@@ -110,12 +110,16 @@ Requires:
 
 Warning:
          - Display led once need about 250ms, so if the bpm > 200, the Dispaly may be wrong.
+         - If end this function on the initiative, all leds will turn off. But the next time run
+           this function, it won't begin at the first time, instead, run at the time you end it.
 */
 static void HeartBeatLed(bool *pbLedIndicate)
 {
 	/*--------------------           Variables          -----------------*/
-	static u8 u8TimeCount = 0;
-	static bool* pbAddrTest = NULL;
+	static u8 u8TimeCount = 0;                // TimeCount, at the time, set led state to the next
+	static bool* pbAddrTest = NULL;           // Bool address, used to check if use the same bool
+	
+	/* Led states */
 	static u32 au32LedArray[] = {0x00090000,  //       C,G
 	                             0x000F0000,  //     B,C,G,Y
 	                             0x000FC000,  //   P,B,C,G,Y,O
@@ -123,7 +127,8 @@ static void HeartBeatLed(bool *pbLedIndicate)
 	                             0x000FC000,  //   P,B,C,G,Y,O
 	                             0x000F0000,  //     B,C,G,Y
 	                             0x00090000}; //       C,G
-	static u8 u8Index = 0;
+	
+	static u8 u8Index = 0;                    // Choose led state
 	/*-------------------------------------------------------------------*/
 	
 	/* If Addr change, initialize the variables */
@@ -134,11 +139,13 @@ static void HeartBeatLed(bool *pbLedIndicate)
 		u8TimeCount = 0;
 	} /* End initialize */
 	
-	/* Dislay led if *pbLedIndicate == TRUE, and set FALSE to stop this function */
+	/* Dislay led if *pbLedIndicate == TRUE,
+	and set FALSE to stop this function when runs to the end state */
 	if(*pbLedIndicate)
 	{
 		u8TimeCount++;
 		
+		/* Change state every 35ms */
 		if(u8TimeCount == 35)
 		{
 			u8TimeCount = 0;
@@ -148,6 +155,7 @@ static void HeartBeatLed(bool *pbLedIndicate)
 		
 		AT91C_BASE_PIOB->PIO_SODR |= au32LedArray[u8Index];
 		
+		/* Runs to the end state */
 		if(u8Index == 6)
 		{
 			u8Index = 0;
@@ -169,7 +177,7 @@ Requires:
          - Needs a HR.
 
 Warning:
-         -
+         - Use DebugPrintf(), so can't run it too fast.
 */
 static void HRDebugDisplay(u8 u8HeartRate)
 {
@@ -257,6 +265,7 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	/* Buzzer initialize */
 	PWMAudioOff(BUZZER1);
 	PWMAudioOff(BUZZER2);
 	PWMAudioSetFrequency(BUZZER1, 1000);
@@ -342,9 +351,10 @@ State Machine Function Definitions
 /* Idle */
 static void UserApp1SM_Idle(void)
 {
-	/* Functions need to be written in if, not else */
-	if(!bHRNeedInit)
+	if(!bHRNeedInit) // HR has initialized
 	{
+		// Functions should be written at here
+		
 		/*------- Button Control -------*/
 		if(WasButtonPressed(BUTTON0))
 		{
@@ -385,27 +395,29 @@ static void UserApp1SM_Idle(void)
 /* channel opened */
 static void UserApp1SM_ChannelOpen(void)
 {
-	static u8 u8TestHR = 0;
-	static u8 u8TestHB = 0;
-	static u8 u8TestDefaultHR = 0;
-	static u8 au8TestDefaultHR[3];
-	static u8 au8TestHR[3];
-	static u8 au8OverTimesCount[] = {'0', '0', '0'};
-	static u8 u8State = 0;
-	static u16 u16DefaultHRRefreshSum = 0;
-	static u8 u8HRChangeCount = 0;
-	static u16 u16DisplayTime = 0;
-	static u16 u16BuzzerTime = 0;
-	static bool bDisplay = FALSE;
-	static bool bLedEnabled = TRUE;
-	static bool bWarnOn = TRUE;
-	u8 u8DValue = 0;
+	static u8 u8TestHR = 0;                             // Check if G_au8AntApiCurrentMessageBytes[7] changes
+	static u8 u8TestHB = 0;                             // Check if G_au8AntApiCurrentMessageBytes[6] changes
+	static u8 u8TestDefaultHR = 0;                      // Check if Default Heart Rate changes
+	static u8 au8LcdRefreshDefaultHR[3];                // If Default Heart Rate changes, display it on lcd
+	static u8 au8LcdRefreshHR[3];                       // If get new Heart Rate, display it on lcd
+	static u8 au8OverTimesCount[] = {'0', '0', '0'};    // +1 when gose to red warning, and display on lcd
+	static u8 u8State = 0;                              // Warning state, check if the state need display
+	static u16 u16DefaultHRRefreshSum = 0;              // A sum of HR, used to calculate average HR and refresh default HR
+	static u8 u8HRChangeCount = 0;                      // When at changecount, calculate average HR and refresh default HR
+	static u16 u16DisplayTime = 0;                      // LCD Button message display time
+	static u16 u16BuzzerTime = 0;                       // Buzzer waring time
+	static bool bDisplay = FALSE;                       // If TRUE, display Button message on lcd
+	static bool bLedEnabled = TRUE;                     // Close or open HRB led effect
+	static bool bWarnOn = TRUE;                         // Close or open warnings
+	u8 u8DValue = 0;                                    // Count the D-Value of new HR and default HR
 	
 	/*------------------- Start AntReadAppMessageBuffer() --------------------*/
 	if(AntReadAppMessageBuffer())
 	{
+		/* Get message */
 		if(G_eAntApiCurrentMessageClass == ANT_DATA)
 		{
+			/* Get new heart rate */
 			if(u8TestHR != G_au8AntApiCurrentMessageBytes[7])
 			{
 				u8TestHR = G_au8AntApiCurrentMessageBytes[7];
@@ -413,16 +425,17 @@ static void UserApp1SM_ChannelOpen(void)
 				u16DefaultHRRefreshSum += u8TestHR;
 				u8DValue = abs(u8TestHR - u8DefaultHR);
 				
-				au8TestHR[0] = u8TestHR / 100 +48;
-				au8TestHR[1] = (u8TestHR / 10) % 10 +48;
-				au8TestHR[2] = u8TestHR % 10 +48;
+				au8LcdRefreshHR[0] = u8TestHR / 100 +48;
+				au8LcdRefreshHR[1] = (u8TestHR / 10) % 10 +48;
+				au8LcdRefreshHR[2] = u8TestHR % 10 +48;
 				
-				LCDMessage(LINE2_START_ADDR + 16,au8TestHR);
+				/* Display new heart rate */
+				LCDMessage(LINE2_START_ADDR + 16,au8LcdRefreshHR);
 				
 				/* Warning states */
 				if(bWarnOn)
 				{
-					if(u8DValue < 20)      // WHITE
+					if(u8DValue < 20)      // WHITE WARN
 					{
 						if(u8State != 0)
 						{
@@ -433,7 +446,7 @@ static void UserApp1SM_ChannelOpen(void)
 							LedPWM(LCD_BLUE, LED_PWM_100);
 						}
 					}
-					else if(u8DValue < 30) // BLUE
+					else if(u8DValue < 30) // BLUE WARN
 					{
 						if(u8State != 1)
 						{
@@ -444,7 +457,7 @@ static void UserApp1SM_ChannelOpen(void)
 							LedPWM(LCD_BLUE, LED_PWM_100);
 						}
 					}
-					else if(u8DValue < 40) // YELLOW
+					else if(u8DValue < 40) // YELLOW WARN
 					{
 						if(u8State != 2)
 						{
@@ -455,7 +468,7 @@ static void UserApp1SM_ChannelOpen(void)
 							LedPWM(LCD_BLUE, LED_PWM_0);
 						}
 					}
-					else if(u8DValue < 50) // ORANGE
+					else if(u8DValue < 50) // ORANGE WARN
 					{
 						if(u8State != 3)
 						{
@@ -467,7 +480,7 @@ static void UserApp1SM_ChannelOpen(void)
 							LedPWM(LCD_BLUE, LED_PWM_10);
 						}
 					}
-					else                   // RED
+					else                   // RED WARN
 					{
 						if(u8State != 4)
 						{
@@ -496,8 +509,9 @@ static void UserApp1SM_ChannelOpen(void)
 						}
 					}
 				} /* End warning states */
-			}
+			} /* End get new heart rate */
 			
+			/* Get new heart beat */
 			if(u8TestHB !=  G_au8AntApiCurrentMessageBytes[6])
 			{
 				u8TestHB = G_au8AntApiCurrentMessageBytes[6];
@@ -505,22 +519,22 @@ static void UserApp1SM_ChannelOpen(void)
 				bLedIndicate = TRUE;
 				
 				HRDebugDisplay(u8TestHR);
-			}
-		}
+			}/* End get new heart beat */
+		} /* End ANT_DATA*/
 		
+		/* Get ANT_TICK*/
 		if(G_eAntApiCurrentMessageClass == ANT_TICK)
 		{
-		}
+		} /* End ANT_TICK */
 	}
 	/*----------------- End AntReadAppMessageBuffer() -----------------------*/
 	
 	/*---------------------- Button Function --------------------------------*/
 	
-	/* Display count over times */
+	/* Display over times */
 	if(WasButtonPressed(BUTTON1))
 	{
 		ButtonAcknowledge(BUTTON1);
-//		PWMAudioOnk(BUZZER1);
 		bDisplay = TRUE;
 		u16DisplayTime = 0;
 		
@@ -534,13 +548,13 @@ static void UserApp1SM_ChannelOpen(void)
 	if(WasButtonPressed(BUTTON2))
 	{
 		ButtonAcknowledge(BUTTON2);
-//		PWMAudioOn(BUZZER1);
 		bDisplay = TRUE;
 		u16DisplayTime = 0;
 		
 		LCDClearChars(LINE1_START_ADDR, 20);
 		
-		if(bWarnOn)
+		/* Display if warn is on or off */
+		if(bWarnOn) // Off
 		{
 			bWarnOn = FALSE;
 			u8State = 0;
@@ -554,7 +568,7 @@ static void UserApp1SM_ChannelOpen(void)
 			LedPWM(LCD_GREEN, LED_PWM_100);
 			LedPWM(LCD_BLUE, LED_PWM_100);
 		}
-		else
+		else // On
 		{
 			bWarnOn = TRUE;
 								       /*01234567890123456789*/
@@ -566,7 +580,6 @@ static void UserApp1SM_ChannelOpen(void)
 	if(WasButtonPressed(BUTTON3))
 	{
 		ButtonAcknowledge(BUTTON3);
-//		PWMAudioOn(BUZZER1);
 		bDisplay = TRUE;
 		u16DisplayTime = 0;
 		
@@ -574,6 +587,7 @@ static void UserApp1SM_ChannelOpen(void)
 		
 		LCDClearChars(LINE1_START_ADDR, 20);
 		
+		/* Display if led display is on or off */
 		if(bLedEnabled)
 		{
 								       /*01234567890123456789*/
@@ -593,7 +607,7 @@ static void UserApp1SM_ChannelOpen(void)
 		au8OverTimesCount[1] = '0';
 		au8OverTimesCount[2] = '0';
 		
-		if(u16DisplayTime == 2000)
+		if(u16DisplayTime == 1500)
 		{
 			LCDMessage(LINE1_START_ADDR + 16, au8OverTimesCount);
 		}
@@ -602,11 +616,6 @@ static void UserApp1SM_ChannelOpen(void)
 	if(bDisplay)
 	{
 		u16DisplayTime++;
-		
-		if(u16DisplayTime == 200)
-		{
-			PWMAudioOff(BUZZER1);
-		}
 		
 		if(u16DisplayTime == 3000)
 		{
@@ -622,11 +631,11 @@ static void UserApp1SM_ChannelOpen(void)
 	{
 		u8TestDefaultHR = u8DefaultHR;
 		
-		au8TestDefaultHR[0] = u8TestDefaultHR / 100 +48;
-		au8TestDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
-		au8TestDefaultHR[2] = u8TestDefaultHR % 10 +48;
+		au8LcdRefreshDefaultHR[0] = u8TestDefaultHR / 100 +48;
+		au8LcdRefreshDefaultHR[1] = (u8TestDefaultHR / 10) % 10 +48;
+		au8LcdRefreshDefaultHR[2] = u8TestDefaultHR % 10 +48;
 		
-		LCDMessage(LINE2_START_ADDR + 6,au8TestDefaultHR);
+		LCDMessage(LINE2_START_ADDR + 6,au8LcdRefreshDefaultHR);
 	}
 	
 	/* Heart Default Rate refresh */
@@ -653,7 +662,7 @@ static void UserApp1SM_ChannelOpen(void)
 		}
 		else
 		{
-			if(u8State == 3)
+			if(u8State == 3) // Orange Warning
 			{
 				if(u16BuzzerTime == 1000)
 				{
@@ -666,7 +675,7 @@ static void UserApp1SM_ChannelOpen(void)
 				}
 			}
 			
-			if(u8State == 4)
+			if(u8State == 4) // Red Warning
 			{
 				if(u16BuzzerTime == 500)
 				{
