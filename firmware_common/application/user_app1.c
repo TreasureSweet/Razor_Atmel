@@ -69,6 +69,42 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/*-------------------------------------------------------------------------------------------------------------------
+Function: LedOffAll
+
+Description:
+turn all leds off.
+*/
+void LedOffAll(void)
+{
+	LedOff(RED);
+	LedOff(ORANGE);
+	LedOff(YELLOW);
+	LedOff(GREEN);
+	LedOff(CYAN);
+	LedOff(BLUE);
+	LedOff(PURPLE);
+	LedOff(WHITE);
+} /* end LedOffAll() */
+
+/*-------------------------------------------------------------------------------------------------------------------
+Function: LedOnAll
+
+Description:
+turn all leds on.
+*/
+void LedOnAll(void)
+{
+	LedOn(RED);
+	LedOn(ORANGE);
+	LedOn(YELLOW);
+	LedOn(GREEN);
+	LedOn(CYAN);
+	LedOn(BLUE);
+	LedOn(PURPLE);
+	LedOn(WHITE);
+} /* end LedOnAll() */
+
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -87,7 +123,12 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 
+	LedOffAll();
+	LedOn(PURPLE);
+	
+	AT91C_BASE_PIOB->PIO_PER |= 0x00000018;
+	AT91C_BASE_PIOA->PIO_PER |= 0x0001F800;
+	AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -136,7 +177,128 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
-
+	/*
+	Function:
+	BUTTON0: Volume Up
+	BUTTON1: Volume Down
+	BUTTON2: Measure Position of X9C103
+	BUTTON3: Change Mode < 1.MIC Signal (id = 0)  2.Phone Signal (id = 1)  3.Mute (id = 2) >
+	
+	Note: 1. Blink led red every time you press button.
+	      2. When measure X9C103, turn white led on, or turn it off.
+	      3. If use MIC, blue led on. If use phone, green led on. If mute, purple led on. Only one led works at the same time.
+	      4. Show volume level and channel id on lcd.
+	*/
+	
+	static bool bPress = FALSE; //Check button press
+	static u8 u8BlinkTime = 255; //Red led blink time count
+	static u8 u8ModeId = 2; //Used to change mode
+	
+	/*
+	#define PA_16_BLADE_CS           (u32)0x00010000
+#define PA_15_BLADE_SCK          (u32)0x00008000
+#define PA_14_BLADE_MOSI         (u32)0x00004000
+#define PA_13_BLADE_MISO         (u32)0x00002000
+	#define PA_12_BLADE_UPOMI        (u32)0x00001000
+#define PA_11_BLADE_UPIMO        (u32)0x00000800
+	#define PB_04_BLADE_AN1         (u32)0x00000010
+#define PB_03_BLADE_AN0         (u32)0x00000008
+	*/
+	
+	/* BUTTON0 */
+	if(WasButtonPressed(BUTTON0))
+	{
+		ButtonAcknowledge(BUTTON0);
+		
+		bPress = TRUE;
+	}/* end BUTTON0 */
+	
+	/* BUTTON1 */
+	if(WasButtonPressed(BUTTON1))
+	{
+		ButtonAcknowledge(BUTTON1);
+		
+		bPress = TRUE;
+	}/* end BUTTON1 */
+	
+	/* BUTTON2 */
+	if(WasButtonPressed(BUTTON2))
+	{
+		ButtonAcknowledge(BUTTON2);
+		
+		bPress = TRUE;
+	}/* end BUTTON2 */
+	
+	/* BUTTON3 */
+	if(WasButtonPressed(BUTTON3))
+	{
+		ButtonAcknowledge(BUTTON3);
+		
+		bPress = TRUE;
+		
+		switch(u8ModeId)
+		{
+			case 0: //Change to phone signal mode
+			{
+				u8ModeId = 1;
+				LedOff(BLUE);
+				LedOn(GREEN);
+				
+				AT91C_BASE_PIOB->PIO_CODR = PB_03_BLADE_AN0;
+				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;
+				break;
+			}
+			
+			case 1: //Change to mute mode
+			{
+				u8ModeId = 2;
+				LedOff(GREEN);
+				LedOn(PURPLE);
+				
+				AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;
+				break;
+			}
+			
+			case 2: //Change to MIC signal mode
+			{
+				u8ModeId = 0;
+				LedOff(PURPLE);
+				LedOn(BLUE);
+				
+				AT91C_BASE_PIOB->PIO_SODR = PB_03_BLADE_AN0;
+				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;
+				break;
+			}
+			
+			default:
+			{
+				LedOn(RED);
+				UserApp1_StateMachine = UserApp1SM_Error;
+				break;
+			}
+		}
+	}/* end BUTTON3 */
+	
+	/* Led Red Blink */
+	if(bPress)
+	{
+		bPress = FALSE;
+		u8BlinkTime = 0;
+		
+		LedOn(RED);
+	}
+	
+	if(u8BlinkTime < 200)
+	{
+		u8BlinkTime++;
+	}
+	else if(u8BlinkTime == 200)
+	{
+		u8BlinkTime = 255;
+		
+		LedOff(RED);
+	}/* end Led Red Blink */
+	
 } /* end UserApp1SM_Idle() */
     
 
