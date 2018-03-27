@@ -75,7 +75,7 @@ Function: LedOffAll
 Description:
 turn all leds off.
 */
-void LedOffAll(void)
+static void LedOffAll(void)
 {
 	LedOff(RED);
 	LedOff(ORANGE);
@@ -93,7 +93,7 @@ Function: LedOnAll
 Description:
 turn all leds on.
 */
-void LedOnAll(void)
+static void LedOnAll(void)
 {
 	LedOn(RED);
 	LedOn(ORANGE);
@@ -104,6 +104,22 @@ void LedOnAll(void)
 	LedOn(PURPLE);
 	LedOn(WHITE);
 } /* end LedOnAll() */
+
+/*-------------------------------------------------------------------------------------------------------------------
+Function: DelayU8
+
+Description:
+Do <u8> times loop to simulate delay.
+
+Promises:
+Need an u8 input 0 ~ 255.
+*/
+static void DelayU8(u8 u8Time)
+{
+	for(u8 i = u8Time ; i; i--)
+	{
+	};
+} /* end DelayU8 */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
@@ -126,9 +142,21 @@ void UserApp1Initialize(void)
 	LedOffAll();
 	LedOn(PURPLE);
 	
-	AT91C_BASE_PIOB->PIO_PER |= 0x00000018;
-	AT91C_BASE_PIOA->PIO_PER |= 0x0001F800;
-	AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;
+	AT91C_BASE_PIOB->PIO_PER |= 0x00000018; // Enable pio control of AN1 and AN0
+	AT91C_BASE_PIOB->PIO_OER |= 0x00000018;
+	
+	AT91C_BASE_PIOA->PIO_PER |= 0x0001F800; // Enable pio control of SCK, MISO, MOSI, TX, RX
+	AT91C_BASE_PIOA->PIO_OER |= 0x0001F800;
+	
+	AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1; // Choose 4053 BY (MUTE mode)
+	AT91C_BASE_PIOA->PIO_CODR = PA_15_BLADE_SCK; // Relay = 0
+	AT91C_BASE_PIOA->PIO_CODR = PA_16_BLADE_CS;
+	AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI;
+	
+	LCDCommand(LCD_CLEAR_CMD);  /*01234567890123456789*/
+	LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
+	LCDMessage(LINE2_START_ADDR, "Level  :            ");
+	
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -188,6 +216,18 @@ static void UserApp1SM_Idle(void)
 	      2. When measure X9C103, turn white led on, or turn it off.
 	      3. If use MIC, blue led on. If use phone, green led on. If mute, purple led on. Only one led works at the same time.
 	      4. Show volume level and channel id on lcd.
+	
+	Contrast: | Control board | Controlled board |
+	          |     +5V       |       5V         |
+	          |     GND       |       GND        |
+	          |     ICS       |       AD         |
+	          |     SCK       |       RE         |
+	          |     MISO      |       CS         |
+	          |     MOSI      |       UD         |
+	          |     TX        |       INC        |
+	          |     RX        |       4053C      |
+	          |     AN1       |       4053B      |
+	          |     AN0       |       4053A      |
 	*/
 	
 	static bool bPress = FALSE; //Check button press
@@ -208,6 +248,15 @@ static void UserApp1SM_Idle(void)
 	/* BUTTON0 */
 	if(WasButtonPressed(BUTTON0))
 	{
+		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO; //CS high to low
+		AT91C_BASE_PIOA->PIO_SODR = PA_14_BLADE_MOSI; //UD to high
+		
+		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // Change from high to low
+		DelayU8(200);
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI;
+		
+		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO; // CS to high
+		
 		ButtonAcknowledge(BUTTON0);
 		
 		bPress = TRUE;
@@ -216,6 +265,16 @@ static void UserApp1SM_Idle(void)
 	/* BUTTON1 */
 	if(WasButtonPressed(BUTTON1))
 	{
+		
+		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO; //CS high to low
+		AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI; //UD to low
+		
+		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // Change from high to low
+		DelayU8(200);
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI;
+		
+		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO; // CS to high
+		
 		ButtonAcknowledge(BUTTON1);
 		
 		bPress = TRUE;
@@ -225,6 +284,15 @@ static void UserApp1SM_Idle(void)
 	if(WasButtonPressed(BUTTON2))
 	{
 		ButtonAcknowledge(BUTTON2);
+		
+		if( (AT91C_BASE_PIOA->PIO_ODSR & PA_11_BLADE_UPIMO) == PA_11_BLADE_UPIMO )
+		{
+			AT91C_BASE_PIOA->PIO_CODR = PA_11_BLADE_UPIMO;
+		}
+		else
+		{
+			AT91C_BASE_PIOA->PIO_SODR = PA_11_BLADE_UPIMO;
+		}
 		
 		bPress = TRUE;
 	}/* end BUTTON2 */
@@ -240,6 +308,8 @@ static void UserApp1SM_Idle(void)
 		{
 			case 0: //Change to phone signal mode
 			{
+				LCDMessage(LINE1_START_ADDR, "Channel: PHONE      ");
+				
 				u8ModeId = 1;
 				LedOff(BLUE);
 				LedOn(GREEN);
@@ -251,6 +321,8 @@ static void UserApp1SM_Idle(void)
 			
 			case 1: //Change to mute mode
 			{
+				LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
+				
 				u8ModeId = 2;
 				LedOff(GREEN);
 				LedOn(PURPLE);
@@ -261,6 +333,8 @@ static void UserApp1SM_Idle(void)
 			
 			case 2: //Change to MIC signal mode
 			{
+				LCDMessage(LINE1_START_ADDR, "Channel: MIC        ");
+				
 				u8ModeId = 0;
 				LedOff(PURPLE);
 				LedOn(BLUE);
@@ -272,7 +346,7 @@ static void UserApp1SM_Idle(void)
 			
 			default:
 			{
-				LedOn(RED);
+				LedBlink(RED, LED_4HZ);
 				UserApp1_StateMachine = UserApp1SM_Error;
 				break;
 			}
@@ -298,7 +372,6 @@ static void UserApp1SM_Idle(void)
 		
 		LedOff(RED);
 	}/* end Led Red Blink */
-	
 } /* end UserApp1SM_Idle() */
     
 
