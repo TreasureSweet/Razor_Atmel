@@ -116,7 +116,7 @@ Need an u8 input 0 ~ 255.
 */
 static void DelayU8(u8 u8Time)
 {
-	for(u8 i = u8Time ; i; i--)
+	for(u8 i = u8Time; i; i--)
 	{
 	};
 } /* end DelayU8 */
@@ -139,23 +139,52 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	/* Initalize Leds */
 	LedOffAll();
 	LedOn(PURPLE);
 	
-	AT91C_BASE_PIOB->PIO_PER |= 0x00000018; // Enable pio control of AN1 and AN0
-	AT91C_BASE_PIOB->PIO_OER |= 0x00000018;
+	/* Enable PIO */
+	//PIOB
+	AT91C_BASE_PIOB->PIO_PER |= 0x00000018;           // Enable pio control of AN1 and AN0
+	AT91C_BASE_PIOB->PIO_OER |= 0x00000018;           // Enable pins output control
 	
-	AT91C_BASE_PIOA->PIO_PER |= 0x0001F800; // Enable pio control of SCK, MISO, MOSI, TX, RX
-	AT91C_BASE_PIOA->PIO_OER |= 0x0001F800;
+	//PIOA
+	AT91C_BASE_PIOA->PIO_PER |= 0x0001F800;           // Enable pio control of SCK, MISO, MOSI, TX, RX
+	AT91C_BASE_PIOA->PIO_OER |= 0x0001F800;           // Enable pins output control
 	
-	AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1; // Choose 4053 BY (MUTE mode)
-	AT91C_BASE_PIOA->PIO_CODR = PA_15_BLADE_SCK; // Relay = 0
-	AT91C_BASE_PIOA->PIO_CODR = PA_16_BLADE_CS;
-	AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI;
+	/* Initialize pins */
+	AT91C_BASE_PIOA->PIO_CODR = PA_16_BLADE_CS;       // AD to low
+	AT91C_BASE_PIOA->PIO_CODR = PA_15_BLADE_SCK;      // RE to low
+	AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;     // CS to high
+	AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;     // UD to low
+	AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI;    // INC to low
+	AT91C_BASE_PIOA->PIO_CODR = PA_11_BLADE_UPIMO;    // 4053C to CX (A_OUT)
+	AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;      // 4053B to BY (GND)
+	AT91C_BASE_PIOB->PIO_CODR = PB_03_BLADE_AN0;      // 4053A to AX (AUD2)
 	
+	/* Initialize LCD */
 	LCDCommand(LCD_CLEAR_CMD);  /*01234567890123456789*/
 	LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
-	LCDMessage(LINE2_START_ADDR, "Level  :            ");
+	LCDMessage(LINE2_START_ADDR, "Level  :   00       ");
+	
+	/* Turn wiper destination to the lowest (Volume level 0)*/
+	for(u8 i = 99; i; i--)
+	{
+		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
+		AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;  // UD to low (Wiper down)
+		DelayU8(2);
+		
+		/* INC change from high to low (change wiper once) */
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
+		DelayU8(2);
+		
+		/* CS change from low to high (store wiper position)*/
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
+	}
 	
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -217,67 +246,88 @@ static void UserApp1SM_Idle(void)
 	      3. If use MIC, blue led on. If use phone, green led on. If mute, purple led on. Only one led works at the same time.
 	      4. Show volume level and channel id on lcd.
 	
-	Contrast: | Control board | Controlled board |
-	          |     +5V       |       5V         |
-	          |     GND       |       GND        |
-	          |     ICS       |       AD         |
-	          |     SCK       |       RE         |
-	          |     MISO      |       CS         |
-	          |     MOSI      |       UD         |
-	          |     TX        |       INC        |
-	          |     RX        |       4053C      |
-	          |     AN1       |       4053B      |
-	          |     AN0       |       4053A      |
+	Contrast: | Control board | Controlled board |               Address              |
+	          |     +5V       |       5V         |                                    |
+	          |     GND       |       GND        |                                    |
+	          |     ICS       |       AD         | PA_16_BLADE_CS     (u32)0x00010000 |
+	          |     SCK       |       RE         | PA_15_BLADE_SCK    (u32)0x00008000 |
+	          |     MISO      |       CS         | PA_13_BLADE_MISO   (u32)0x00002000 |
+	          |     MOSI      |       UD         | PA_14_BLADE_MOSI   (u32)0x00004000 |
+	          |     TX        |       INC        | PA_12_BLADE_UPOMI  (u32)0x00001000 |
+	          |     RX        |       4053C      | PA_11_BLADE_UPIMO  (u32)0x00000800 |
+	          |     AN1       |       4053B      | PB_04_BLADE_AN1    (u32)0x00000010 |
+	          |     AN0       |       4053A      | PB_03_BLADE_AN0    (u32)0x00000008 |
 	*/
 	
-	static bool bPress = FALSE; //Check button press
-	static u8 u8BlinkTime = 255; //Red led blink time count
-	static u8 u8ModeId = 2; //Used to change mode
-	
-	/*
-	#define PA_16_BLADE_CS           (u32)0x00010000
-#define PA_15_BLADE_SCK          (u32)0x00008000
-#define PA_14_BLADE_MOSI         (u32)0x00004000
-#define PA_13_BLADE_MISO         (u32)0x00002000
-	#define PA_12_BLADE_UPOMI        (u32)0x00001000
-#define PA_11_BLADE_UPIMO        (u32)0x00000800
-	#define PB_04_BLADE_AN1         (u32)0x00000010
-#define PB_03_BLADE_AN0         (u32)0x00000008
-	*/
+	static bool bPress = FALSE;       // Check button press
+	static bool bLevelChange = FALSE; // Check if volume level change
+	static u8 u8BlinkTime = 255;      // Red led blink time count
+	static u8 u8ModeId = 2;           // Used to change mode
+	static u8 u8VolumeLevel = 0;      // Volume level count
+	static u8 u8LevelOnLcd = 0;       // Show u8VolumeLevel on lcd
 	
 	/* BUTTON0 */
 	if(WasButtonPressed(BUTTON0))
 	{
-		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO; //CS high to low
-		AT91C_BASE_PIOA->PIO_SODR = PA_14_BLADE_MOSI; //UD to high
-		
-		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // Change from high to low
-		DelayU8(200);
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI;
-		
-		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO; // CS to high
-		
 		ButtonAcknowledge(BUTTON0);
 		
 		bPress = TRUE;
+		
+		/* Enable wiper control */
+		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
+		AT91C_BASE_PIOA->PIO_SODR = PA_14_BLADE_MOSI;  // UD to high (Wiper up)
+		DelayU8(2);
+		
+		/* INC change from high to low (change wiper once) */
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
+		DelayU8(2);
+		
+		/* CS change from low to high (store wiper position)*/
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
+		
+		/* Volume level count */
+		if(u8VolumeLevel < 99)
+		{
+			bLevelChange = TRUE;
+			u8VolumeLevel++;
+		}
+		
 	}/* end BUTTON0 */
 	
 	/* BUTTON1 */
 	if(WasButtonPressed(BUTTON1))
 	{
-		
-		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO; //CS high to low
-		AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI; //UD to low
-		
-		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // Change from high to low
-		DelayU8(200);
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI;
-		
-		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO; // CS to high
-		
 		ButtonAcknowledge(BUTTON1);
 		
 		bPress = TRUE;
+		
+		/* Enable wiper control */
+		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
+		AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;  // UD to low (Wiper down)
+		DelayU8(2);
+		
+		/* INC change from high to low (change wiper once) */
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
+		DelayU8(2);
+		
+		/* CS change from low to high (store wiper position)*/
+		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
+		
+		/* Volume level count */
+		if(u8VolumeLevel > 0)
+		{
+			bLevelChange = TRUE;
+			u8VolumeLevel--;
+		}
+		
 	}/* end BUTTON1 */
 	
 	/* BUTTON2 */
@@ -285,16 +335,21 @@ static void UserApp1SM_Idle(void)
 	{
 		ButtonAcknowledge(BUTTON2);
 		
-		if( (AT91C_BASE_PIOA->PIO_ODSR & PA_11_BLADE_UPIMO) == PA_11_BLADE_UPIMO )
+		bPress = TRUE;
+		
+		if((AT91C_BASE_PIOB->PIO_ODSR & PB_13_LED_WHT) == PB_13_LED_WHT) // Disable measure
 		{
-			AT91C_BASE_PIOA->PIO_CODR = PA_11_BLADE_UPIMO;
+			LedOff(WHITE);
+			
+			AT91C_BASE_PIOA->PIO_CODR = PA_11_BLADE_UPIMO;    // 4053C to CX (A_OUT)
 		}
-		else
+		else // Enable measure
 		{
-			AT91C_BASE_PIOA->PIO_SODR = PA_11_BLADE_UPIMO;
+			LedOn(WHITE);
+			
+			AT91C_BASE_PIOA->PIO_SODR = PA_11_BLADE_UPIMO;    // 4053C to CY (3.3V)
 		}
 		
-		bPress = TRUE;
 	}/* end BUTTON2 */
 	
 	/* BUTTON3 */
@@ -306,7 +361,7 @@ static void UserApp1SM_Idle(void)
 		
 		switch(u8ModeId)
 		{
-			case 0: //Change to phone signal mode
+			case 0: // Change to phone signal mode
 			{
 				LCDMessage(LINE1_START_ADDR, "Channel: PHONE      ");
 				
@@ -314,12 +369,12 @@ static void UserApp1SM_Idle(void)
 				LedOff(BLUE);
 				LedOn(GREEN);
 				
-				AT91C_BASE_PIOB->PIO_CODR = PB_03_BLADE_AN0;
-				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;
+				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;      // 4053B to BX (Aout)
+				AT91C_BASE_PIOB->PIO_CODR = PB_03_BLADE_AN0;      // 4053A to AX (AUD2)
 				break;
 			}
 			
-			case 1: //Change to mute mode
+			case 1: // Change to mute mode
 			{
 				LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
 				
@@ -327,11 +382,11 @@ static void UserApp1SM_Idle(void)
 				LedOff(GREEN);
 				LedOn(PURPLE);
 				
-				AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;
+				AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;      // 4053B to BY (GND)
 				break;
 			}
 			
-			case 2: //Change to MIC signal mode
+			case 2: // Change to MIC signal mode
 			{
 				LCDMessage(LINE1_START_ADDR, "Channel: MIC        ");
 				
@@ -339,8 +394,8 @@ static void UserApp1SM_Idle(void)
 				LedOff(PURPLE);
 				LedOn(BLUE);
 				
-				AT91C_BASE_PIOB->PIO_SODR = PB_03_BLADE_AN0;
-				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;
+				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;      // 4053B to BX (Aout)
+				AT91C_BASE_PIOB->PIO_SODR = PB_03_BLADE_AN0;      // 4053A to AY (AUD1)
 				break;
 			}
 			
@@ -353,7 +408,7 @@ static void UserApp1SM_Idle(void)
 		}
 	}/* end BUTTON3 */
 	
-	/* Led Red Blink */
+	/*---------Led Red Blink for button-----------*/
 	if(bPress)
 	{
 		bPress = FALSE;
@@ -371,7 +426,22 @@ static void UserApp1SM_Idle(void)
 		u8BlinkTime = 255;
 		
 		LedOff(RED);
-	}/* end Led Red Blink */
+	}
+	/*------------end Led Red Blink---------------*/
+	
+	/*------------Lcd Volume Level----------------*/
+	if(bLevelChange)
+	{
+		bLevelChange = FALSE;
+		
+		u8LevelOnLcd = u8VolumeLevel / 10 + 48;
+		LCDMessage(LINE2_START_ADDR +11, &u8LevelOnLcd);
+		
+		u8LevelOnLcd = u8VolumeLevel % 10 + 48;
+		LCDMessage(LINE2_START_ADDR +12, &u8LevelOnLcd);
+	}
+	/*----------end lcd volume level--------------*/
+	
 } /* end UserApp1SM_Idle() */
     
 
