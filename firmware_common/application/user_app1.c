@@ -165,7 +165,7 @@ void UserApp1Initialize(void)
 	/* Initialize LCD */
 	LCDCommand(LCD_CLEAR_CMD);  /*01234567890123456789*/
 	LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
-	LCDMessage(LINE2_START_ADDR, "Level  :   00       ");
+	LCDMessage(LINE2_START_ADDR, "Level  :   00    MIN");
 	
 	/* Turn wiper destination to the lowest (Volume level 0)*/
 	for(u8 i = 99; i; i--)
@@ -265,12 +265,15 @@ static void UserApp1SM_Idle(void)
 	static u8 u8ModeId = 2;           // Used to change mode
 	static u8 u8VolumeLevel = 0;      // Volume level count
 	static u8 u8LevelOnLcd = 0;       // Show u8VolumeLevel on lcd
+	static u8 u8ChangeInterval = 0;   // Interval time of changing volume continuously
 	
 	/* BUTTON0 */
+	/* Change once < Press > */
 	if(WasButtonPressed(BUTTON0))
 	{
 		ButtonAcknowledge(BUTTON0);
 		
+		u8ChangeInterval = 0;
 		bPress = TRUE;
 		
 		/* Enable wiper control */
@@ -292,17 +295,75 @@ static void UserApp1SM_Idle(void)
 		/* Volume level count */
 		if(u8VolumeLevel < 99)
 		{
+			if(u8VolumeLevel == 0) // Clear " MIN "
+			{
+				LCDClearChars(LINE2_START_ADDR + 17, 3);
+			}
+			
 			bLevelChange = TRUE;
 			u8VolumeLevel++;
+			
+			if(u8VolumeLevel == 99) // Display " MAX "
+			{
+				LCDMessage(LINE2_START_ADDR + 17, "MAX");
+			}
 		}
 		
-	}/* end BUTTON0 */
+	}/* end Change once */
+	
+	/* Change continuously < Hold > */
+	if(IsButtonHeld(BUTTON0, 1500))
+	{
+		if(u8ChangeInterval == 0)
+		{
+			/* Enable wiper control */
+			AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
+			AT91C_BASE_PIOA->PIO_SODR = PA_14_BLADE_MOSI;  // UD to high (Wiper up)
+			DelayU8(2);
+			
+			/* INC change from high to low (change wiper once) */
+			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+			DelayU8(2);
+			AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
+			DelayU8(2);
+			
+			/* CS change from low to high (store wiper position)*/
+			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+			DelayU8(2);
+			AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
+			
+			/* Volume level count */
+			if(u8VolumeLevel < 99)
+			{
+				if(u8VolumeLevel == 0) // Clear " MIN "
+				{
+					LCDClearChars(LINE2_START_ADDR + 17, 3);
+				}
+				
+				bLevelChange = TRUE;
+				u8VolumeLevel++;
+				
+				if(u8VolumeLevel == 99) // Display " MAX "
+				{
+					LCDMessage(LINE2_START_ADDR + 17, "MAX");
+				}
+			}
+		}
+		
+		if(++u8ChangeInterval == 150)
+		{
+			u8ChangeInterval = 0;
+		}
+	}/* end Change continuously */
+	/* end BUTTON0 */
 	
 	/* BUTTON1 */
+	/* Change once < Press > */
 	if(WasButtonPressed(BUTTON1))
 	{
 		ButtonAcknowledge(BUTTON1);
 		
+		u8ChangeInterval = 0;
 		bPress = TRUE;
 		
 		/* Enable wiper control */
@@ -324,11 +385,67 @@ static void UserApp1SM_Idle(void)
 		/* Volume level count */
 		if(u8VolumeLevel > 0)
 		{
+			if(u8VolumeLevel == 99) // Clear " MAX "
+			{
+				LCDClearChars(LINE2_START_ADDR + 17, 3);
+			}
+			
 			bLevelChange = TRUE;
 			u8VolumeLevel--;
+			
+			if(u8VolumeLevel == 0) // Display " MIN "
+			{
+				LCDMessage(LINE2_START_ADDR + 17, "MIN");
+			}
 		}
 		
-	}/* end BUTTON1 */
+	}/* end Change once */
+	
+	/* Change continuously < Hold > */
+	if(IsButtonHeld(BUTTON1, 1500))
+	{
+		if(u8ChangeInterval == 0)
+		{
+			/* Enable wiper control */
+			AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
+			AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;  // UD to low (Wiper down)
+			DelayU8(2);
+			
+			/* INC change from high to low (change wiper once) */
+			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+			DelayU8(2);
+			AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
+			DelayU8(2);
+			
+			/* CS change from low to high (store wiper position)*/
+			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
+			DelayU8(2);
+			AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
+			
+			/* Volume level count */
+			if(u8VolumeLevel > 0)
+			{
+				if(u8VolumeLevel == 99) // Clear " MAX "
+				{
+					LCDClearChars(LINE2_START_ADDR + 17, 3);
+				}
+				
+				bLevelChange = TRUE;
+				u8VolumeLevel--;
+				
+				if(u8VolumeLevel == 0) // Display " MIN "
+				{
+					LCDMessage(LINE2_START_ADDR + 17, "MIN");
+				}
+			}
+		}
+		
+		if(++u8ChangeInterval == 150)
+		{
+			u8ChangeInterval = 0;
+		}
+	}/* end Change continuously */
+	/* end BUTTON1 */
 	
 	/* BUTTON2 */
 	if(WasButtonPressed(BUTTON2))
