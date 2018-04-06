@@ -1,24 +1,13 @@
 /**********************************************************************************************************************
-File: user_app1.h                                                                
-
-----------------------------------------------------------------------------------------------------------------------
-To start a new task using this user_app1 as a template:
-1. Follow the instructions at the top of user_app1.c
-2. Use ctrl-h to find and replace all instances of "user_app1" with "yournewtaskname"
-3. Use ctrl-h to find and replace all instances of "UserApp1" with "YourNewTaskName"
-4. Use ctrl-h to find and replace all instances of "USER_APP1" with "YOUR_NEW_TASK_NAME"
-5. Add #include yournewtaskname.h" to configuration.h
-6. Add/update any special configurations required in configuration.h (e.g. peripheral assignment and setup values)
-7. Delete this text (between the dashed lines)
-----------------------------------------------------------------------------------------------------------------------
+File: X9C103S.h                                                                
 
 Description:
-Header file for user_app1.c
+Header file for X9C103S.c
 
 **********************************************************************************************************************/
 
-#ifndef __USER_APP1_H
-#define __USER_APP1_H
+#ifndef __X9C103_APP_H
+#define __X9C103_APP_H
 
 /**********************************************************************************************************************
 Type Definitions
@@ -28,10 +17,17 @@ Type Definitions
 /**********************************************************************************************************************
 Constants / Definitions
 **********************************************************************************************************************/
-#define AdcCallbackTimes 50      // Conversion times
-#define ButtonPressLed RED       // Led blink for buttons
-#define ADCUsed ADC12_CH2        // ADC Channel
-#define PIN_RE PA_15_BLADE_SCK   // Pin " Relay "
+
+/*---------------------------------------------------------------------------------------------------------------------
+Contrast: | Control board | Controlled board |               Address              |
+		  |     MISO      |       CS         | PA_13_BLADE_MISO   (u32)0x00002000 |
+		  |     MOSI      |       UD         | PA_14_BLADE_MOSI   (u32)0x00004000 |
+		  |     TX        |       INC        | PA_12_BLADE_UPOMI  (u32)0x00001000 |
+*/
+#define X9C103S_INC PA_12_BLADE_UPOMI
+#define X9C103S_UD  PA_14_BLADE_MOSI
+#define X9C103S_CS  PA_13_BLADE_MISO
+/*--------------------------------------------------------------------------------------------------------------------*/
 
 /**********************************************************************************************************************
 Function Declarations
@@ -40,34 +36,31 @@ Function Declarations
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
-void UserApp1_AdcCallback(u16 u16Result_);
+void DelayU8(u8);
+void X9C103S_RESISTANCE_UP(u8);
+void X9C103S_RESISTANCE_DOWN(u8);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
-void UserApp1Initialize(void);
-void UserApp1RunActiveState(void);
-
+void X9C103S_APP_INIT(void);
+void X9C103S_APP_RunActiveState(void);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
 /*--------------------------------------------------------------------------------------------------------------------*/
-static void ButtonPressLedDisplay(bool *);
-static void VolumeUp(void);
-static void VolumeDown(void);
-static void ModeChange(void);
-static void VolageCheck(bool *);
+
 
 /***********************************************************************************************************************
 State Machine Declarations
 ***********************************************************************************************************************/
-static void UserApp1SM_Idle(void);
+static void X9C103S_SM_Idle(void);
 
-static void UserApp1SM_Error(void);
+static void X9C103S_SM_Error(void);
 
 
-#endif /* __USER_APP1_H */
 
+#endif /* __X9C103_APP_H */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* End of File                                                                                                        */

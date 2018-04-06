@@ -1,8 +1,8 @@
 /**********************************************************************************************************************
-File: user_app2.c                                                                
+File: 74HC4053D.c                                                                
 
 Description:
-This is a user_app2.c file template 
+This is a 74HC4053D.c file template 
 
 ------------------------------------------------------------------------------------------------------------------------
 API:
@@ -11,11 +11,7 @@ Public functions:
 
 
 Protected System functions:
-void UserApp2Initialize(void)
-Runs required initialzation for the task.  Should only be called once in main init section.
 
-void UserApp2RunActiveState(void)
-Runs current task state.  Should only be called once in main loop.
 
 
 **********************************************************************************************************************/
@@ -27,24 +23,17 @@ Global variable definitions with scope across entire project.
 All Global variable names shall start with "G_UserApp2"
 ***********************************************************************************************************************/
 /* New variables */
-volatile u32 G_u32UserApp2Flags;                       /* Global state flags */
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
-extern volatile u32 G_u32SystemFlags;                  /* From main.c */
-extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
-
-extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
-extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp2_" and be declared as static.
 ***********************************************************************************************************************/
-static fnCode_type UserApp2_StateMachine;            /* The state machine function pointer */
-//static u32 UserApp2_u32Timeout;                      /* Timeout counter used across states */
+static fnCode_type _74HC4053D_APP_StateMachine;            /* The state machine function pointer */
 
 
 /**********************************************************************************************************************
@@ -55,13 +44,68 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/*-------------------------------------------------------------------------------------------------------------------
+Function: _74HC4053D_SWITCH_XY
+
+Description:
+Choose AX or AY, BX or BY, CX or CY
+
+Promises:
+*/
+void _74HC4053D_SWITCH_XY(C4053DSwitchType SwitchType)
+{
+	switch(SwitchType)
+	{
+		case AX:
+		{
+			AT91C_BASE_PIOA->PIO_CODR = _74HC4053D_A;
+			break;
+		}
+		
+		case AY:
+		{
+			AT91C_BASE_PIOA->PIO_SODR = _74HC4053D_A;
+			break;
+		}
+		
+		case BX:
+		{
+			AT91C_BASE_PIOB->PIO_CODR = _74HC4053D_B;
+			break;
+		}
+		
+		case BY:
+		{
+			AT91C_BASE_PIOB->PIO_SODR = _74HC4053D_B;
+			break;
+		}
+		
+		case CX:
+		{
+			AT91C_BASE_PIOA->PIO_CODR = _74HC4053D_C;
+			break;
+		}
+		
+		case CY:
+		{
+			AT91C_BASE_PIOA->PIO_SODR = _74HC4053D_C;
+			break;
+		}
+		
+		default:
+		{
+			break;
+		}
+	}
+} /* end _74HC4053D_SWITCH_XY */
+
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------------------------------------------------
-Function: UserApp2Initialize
+Function: X9C103S_APP_INIT
 
 Description:
 Initializes the State Machine and its variables.
@@ -72,24 +116,37 @@ Requires:
 Promises:
   - 
 */
-void UserApp2Initialize(void)
+void _74HC4053D_APP_INIT(void)
 {
-  /* If good initialization, set state to Idle */
-  if( 1 )
-  {
-    UserApp2_StateMachine = UserApp2SM_Idle;
-  }
-  else
-  {
-    /* The task isn't properly initialized, so shut it down and don't run */
-    UserApp2_StateMachine = UserApp2SM_FailedInit;
-  }
+	/* PIOA enable */
+	AT91C_BASE_PIOA->PIO_PER |= 0x00010800;
+	AT91C_BASE_PIOA->PIO_OER |= 0x00010800;
+	
+	/* PIOB enable */
+	AT91C_BASE_PIOB->PIO_PER |= 0x00000010;
+	AT91C_BASE_PIOB->PIO_OER |= 0x00000010;
+	
+	/* PIOA initialize */
+	AT91C_BASE_PIOA->PIO_CODR = 0x00010800;
+	
+	/* PIOB initialize */
+	AT91C_BASE_PIOB->PIO_CODR = 0x00000010;
+	
+	/* If good initialization, set state to Idle */
+	if( 1 )
+	{
+		_74HC4053D_APP_StateMachine = _74HC4053D_SM_Idle;
+	}
+	else
+	{
+		/* The task isn't properly initialized, so shut it down and don't run */
+		_74HC4053D_APP_StateMachine = _74HC4053D_SM_Error;
+	}
+} /* end X9C103S_APP_INIT() */
 
-} /* end UserApp2Initialize() */
 
-  
 /*----------------------------------------------------------------------------------------------------------------------
-Function UserApp2RunActiveState()
+Function X9C103S_APP_RunActiveState()
 
 Description:
 Selects and runs one iteration of the current state in the state machine.
@@ -102,12 +159,10 @@ Requires:
 Promises:
   - Calls the function to pointed by the state machine function pointer
 */
-void UserApp2RunActiveState(void)
+void _74HC4053D_APP_RunActiveState(void)
 {
-  UserApp2_StateMachine();
-
-} /* end UserApp2RunActiveState */
-
+	_74HC4053D_APP_StateMachine();
+} /* end X9C103S_APP_RunActiveState() */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
@@ -117,29 +172,19 @@ void UserApp2RunActiveState(void)
 /**********************************************************************************************************************
 State Machine Function Definitions
 **********************************************************************************************************************/
-
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for ??? */
-static void UserApp2SM_Idle(void)
+static void _74HC4053D_SM_Idle(void)
 {
-} /* end UserApp2SM_Idle() */
-     
-#if 0
+} /* end _74HC4053D_SM_Idle() */
+
+
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
-static void UserApp2SM_Error(void)          
+static void _74HC4053D_SM_Error(void)          
 {
   
-} /* end UserApp2SM_Error() */
-#endif
-
-
-/*-------------------------------------------------------------------------------------------------------------------*/
-/* State to sit in if init failed */
-static void UserApp2SM_FailedInit(void)          
-{
-    
-} /* end UserApp2SM_FailedInit() */
+} /* end _74HC4053D_SM_Error() */
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/

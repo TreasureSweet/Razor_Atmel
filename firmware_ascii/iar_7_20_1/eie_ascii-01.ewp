@@ -1942,6 +1942,9 @@
     <group>
       <name>Include</name>
       <file>
+        <name>$PROJ_DIR$\..\drivers\74HC4053D.h</name>
+      </file>
+      <file>
         <name>$PROJ_DIR$\..\..\firmware_common\drivers\adc12.h</name>
       </file>
       <file>
@@ -1992,9 +1995,15 @@
       <file>
         <name>$PROJ_DIR$\..\..\firmware_common\drivers\utilities.h</name>
       </file>
+      <file>
+        <name>$PROJ_DIR$\..\drivers\X9C103S.h</name>
+      </file>
     </group>
     <group>
       <name>Source</name>
+      <file>
+        <name>$PROJ_DIR$\..\drivers\74HC4053D.c</name>
+      </file>
       <file>
         <name>$PROJ_DIR$\..\..\firmware_common\drivers\adc12.c</name>
       </file>
@@ -2039,6 +2048,9 @@
       </file>
       <file>
         <name>$PROJ_DIR$\..\..\firmware_common\drivers\utilities.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\drivers\X9C103S.c</name>
       </file>
     </group>
   </group>

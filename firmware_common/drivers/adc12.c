@@ -331,16 +331,14 @@ State Machine Function Definitions
 /* Wait for a message to be queued */
 static void Adc12SM_Idle(void)
 {
-    
 } /* end Adc12SM_Idle() */
-     
+
 
 #if 0
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
 static void Adc12SM_Error(void)          
 {
-  
 } /* end Adc12SM_Error() */
 #endif
 

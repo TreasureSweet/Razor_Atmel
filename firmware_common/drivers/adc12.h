@@ -187,7 +187,7 @@ void Adc12DisableChannel(Adc12ChannelType eAdcChannel_);
 
 bool Adc12StartConversion(Adc12ChannelType eAdcChannel_);
 void Adc12AssignCallback(Adc12ChannelType eAdcChannel_, fnCode_u16_type fpUserCallback_);
-
+void Adc12Conversing();
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
@@ -201,13 +201,12 @@ void Adc12RunActiveState(void);
 /*--------------------------------------------------------------------------------------------------------------------*/
 void Adc12DefaultCallback(u16 u16Result_);
 
-
 /***********************************************************************************************************************
 State Machine Declarations
 ***********************************************************************************************************************/
 static void Adc12SM_Idle(void);    
 
-static void Adc12SM_Error(void);         
+static void Adc12SM_Error(void); 
 static void Adc12SM_FailedInit(void);        
 
 

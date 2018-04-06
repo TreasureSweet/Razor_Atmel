@@ -42,7 +42,9 @@ All Global variable names shall start with "G_UserApp1"
 ***********************************************************************************************************************/
 /* New variables */
 volatile u32 G_u32UserApp1Flags;                       /* Global state flags */
-
+u8 u8CallbackTimesCount;
+static u32 u32VoltageCount;
+static u8 u8VolumeLevel;
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
@@ -51,7 +53,6 @@ extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
 
 extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
 extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
-
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
@@ -69,57 +70,12 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
-/*-------------------------------------------------------------------------------------------------------------------
-Function: LedOffAll
-
-Description:
-turn all leds off.
-*/
-static void LedOffAll(void)
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* ADC callback */
+void UserApp1_AdcCallback(u16 u16Result_)
 {
-	LedOff(RED);
-	LedOff(ORANGE);
-	LedOff(YELLOW);
-	LedOff(GREEN);
-	LedOff(CYAN);
-	LedOff(BLUE);
-	LedOff(PURPLE);
-	LedOff(WHITE);
-} /* end LedOffAll() */
-
-/*-------------------------------------------------------------------------------------------------------------------
-Function: LedOnAll
-
-Description:
-turn all leds on.
-*/
-static void LedOnAll(void)
-{
-	LedOn(RED);
-	LedOn(ORANGE);
-	LedOn(YELLOW);
-	LedOn(GREEN);
-	LedOn(CYAN);
-	LedOn(BLUE);
-	LedOn(PURPLE);
-	LedOn(WHITE);
-} /* end LedOnAll() */
-
-/*-------------------------------------------------------------------------------------------------------------------
-Function: DelayU8
-
-Description:
-Do <u8> times loop to simulate delay.
-
-Promises:
-Need an u8 input 0 ~ 255.
-*/
-static void DelayU8(u8 u8Time)
-{
-	for(u8 i = u8Time; i; i--)
-	{
-	};
-} /* end DelayU8 */
+	u32VoltageCount += u16Result_;
+} /* end UserApp1_AdcCallback() */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
@@ -139,52 +95,31 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
+	/* ADC Initialize */
+	u8CallbackTimesCount = 0;
+	u32VoltageCount = 0;
+	
 	/* Initalize Leds */
 	LedOffAll();
 	LedOn(PURPLE);
 	
-	/* Enable PIO */
-	//PIOB
-	AT91C_BASE_PIOB->PIO_PER |= 0x00000018;           // Enable pio control of AN1 and AN0
-	AT91C_BASE_PIOB->PIO_OER |= 0x00000018;           // Enable pins output control
-	
-	//PIOA
-	AT91C_BASE_PIOA->PIO_PER |= 0x0001F800;           // Enable pio control of SCK, MISO, MOSI, TX, RX
-	AT91C_BASE_PIOA->PIO_OER |= 0x0001F800;           // Enable pins output control
-	
 	/* Initialize pins */
-	AT91C_BASE_PIOA->PIO_CODR = PA_16_BLADE_CS;       // AD to low
-	AT91C_BASE_PIOA->PIO_CODR = PA_15_BLADE_SCK;      // RE to low
-	AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;     // CS to high
-	AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;     // UD to low
-	AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI;    // INC to low
-	AT91C_BASE_PIOA->PIO_CODR = PA_11_BLADE_UPIMO;    // 4053C to CX (A_OUT)
-	AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;      // 4053B to BY (GND)
-	AT91C_BASE_PIOB->PIO_CODR = PB_03_BLADE_AN0;      // 4053A to AX (AUD2)
+	AT91C_BASE_PIOA->PIO_PER |= PIN_RE;
+	AT91C_BASE_PIOA->PIO_OER |= PIN_RE;
+	AT91C_BASE_PIOA->PIO_CODR = PIN_RE;      // RE to low
 	
 	/* Initialize LCD */
 	LCDCommand(LCD_CLEAR_CMD);  /*01234567890123456789*/
 	LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
 	LCDMessage(LINE2_START_ADDR, "Level  :   00    MIN");
+	_74HC4053D_SWITCH_XY(BY);
 	
 	/* Turn wiper destination to the lowest (Volume level 0)*/
-	for(u8 i = 99; i; i--)
-	{
-		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
-		AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;  // UD to low (Wiper down)
-		DelayU8(2);
-		
-		/* INC change from high to low (change wiper once) */
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-		DelayU8(2);
-		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
-		DelayU8(2);
-		
-		/* CS change from low to high (store wiper position)*/
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-		DelayU8(2);
-		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
-	}
+	X9C103S_RESISTANCE_UP(99);
+	u8VolumeLevel = 0;
+	
+	/* Assign ADC callback */
+	Adc12AssignCallback(ADC12_CH2, UserApp1_AdcCallback);
 	
   /* If good initialization, set state to Idle */
   if( 1 )
@@ -225,6 +160,229 @@ void UserApp1RunActiveState(void)
 /* Private functions                                                                                                  */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Led Blink for button press */
+static void ButtonPressLedDisplay(bool *pbPress)
+{
+	static u8 u8BlinkTime = 200;      // Red led blink time count
+	
+	if(*pbPress)                      // Check if the first press
+	{
+		*pbPress = FALSE;
+		u8BlinkTime = 0;
+		
+		LedOn(ButtonPressLed);
+	}
+	
+	if(u8BlinkTime < 200)             // Not the first, so count for led on time
+	{
+		u8BlinkTime++;
+	}
+	
+	if(u8BlinkTime == 200)            // Time is up, turn off led
+	{
+		LedOff(ButtonPressLed);
+	}
+} /* end ButtonPressLedDisplay */
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Turn Volume up */
+static void VolumeUp(void)
+{
+	static u8 au8LevelOnLcd[] = "00";         // Displayed on lcd
+	
+	X9C103S_RESISTANCE_DOWN(1);
+	
+	/* Volume level count */
+	if(u8VolumeLevel < 99)
+	{
+		if(u8VolumeLevel == 0) // Clear " MIN "
+		{
+			LCDClearChars(LINE2_START_ADDR + 17, 3);
+		}
+		
+		u8VolumeLevel++;
+		
+		if(u8VolumeLevel == 99) // Display " MAX "
+		{
+			LCDMessage(LINE2_START_ADDR + 17, "MAX");
+		}
+	}
+	
+	/* Volume level display */
+	au8LevelOnLcd[0] = u8VolumeLevel / 10 + 48;
+	au8LevelOnLcd[1] = u8VolumeLevel % 10 + 48;
+	LCDMessage(LINE2_START_ADDR +11, au8LevelOnLcd);
+	
+} /* end VolumeUp */
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Turn Volume down */
+static void VolumeDown(void)
+{
+	static u8 au8LevelOnLcd[] = "00";         // Displayed on lcd
+	
+	X9C103S_RESISTANCE_UP(1);
+	
+	/* Volume level count */
+	if(u8VolumeLevel > 0)
+	{
+		if(u8VolumeLevel == 99) // Clear " MAX "
+		{
+			LCDClearChars(LINE2_START_ADDR + 17, 3);
+		}
+		
+		u8VolumeLevel--;
+		
+		if(u8VolumeLevel == 0) // Display " MIN "
+		{
+			LCDMessage(LINE2_START_ADDR + 17, "MIN");
+		}
+	}
+	
+	/* Volume level display */
+	au8LevelOnLcd[0] = u8VolumeLevel / 10 + 48;
+	au8LevelOnLcd[1] = u8VolumeLevel % 10 + 48;
+	LCDMessage(LINE2_START_ADDR +11, au8LevelOnLcd);
+	
+} /* end VolumeDown */
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* Change mode */
+static void ModeChange(void)
+{
+	static u8 u8ModeId = 2;           // Used to change mode
+	
+	switch(u8ModeId)
+	{
+		case 0: // Change to phone signal mode
+		{
+			LCDMessage(LINE1_START_ADDR, "Channel: PHONE      ");
+			
+			u8ModeId = 1;
+			LedOff(BLUE);
+			LedOn(GREEN);
+			
+			_74HC4053D_SWITCH_XY(BX);
+			_74HC4053D_SWITCH_XY(AX);
+			break;
+		}
+		
+		case 1: // Change to mute mode
+		{
+			LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
+			
+			u8ModeId = 2;
+			LedOff(GREEN);
+			LedOn(PURPLE);
+			
+			_74HC4053D_SWITCH_XY(BY);
+			break;
+		}
+		
+		case 2: // Change to MIC signal mode
+		{
+			LCDMessage(LINE1_START_ADDR, "Channel: MIC        ");
+			
+			u8ModeId = 0;
+			LedOff(PURPLE);
+			LedOn(BLUE);
+			
+			_74HC4053D_SWITCH_XY(BX);
+			_74HC4053D_SWITCH_XY(AY);
+			break;
+		}
+		
+		default:
+		{
+			LedBlink(RED, LED_4HZ);
+			UserApp1_StateMachine = UserApp1SM_Error;
+			break;
+		}
+	}
+} /* end ModeChange */
+
+/*-------------------------------------------------------------------------------------------------------------------*/
+/* VolageCheck */
+static void VolageCheck(bool *pbVCheck)
+{
+	static u8 u8Wait = 0;                    // Wait for volage change to 3.3
+	static u16 u16DispalyTime = 0;           // Time for displaying volage
+	                              /*0123*/
+	static u8 au8VolageDisplay[] = "3.3V";   // Displayed on lcd line1
+	
+	if(u8CallbackTimesCount > 0)             // Start conversion continuously to count average
+	{
+		if(Adc12StartConversion(ADCUsed))
+		{
+			u8CallbackTimesCount--;
+			
+			if(u8CallbackTimesCount == 0)    // Conversion finish, count average
+			{
+				u32VoltageCount /= AdcCallbackTimes;
+				u32VoltageCount = ((3300 * u32VoltageCount) / 4096) / 10;
+				
+				if(u32VoltageCount % 10 >= 5)// Come in five
+				{
+					u32VoltageCount /= 10;
+					
+					if((u32VoltageCount % 10) + 1 == 10)
+					{
+						au8VolageDisplay[2] = 48;
+						u32VoltageCount += 10;
+					}
+					else
+					{
+						au8VolageDisplay[2] = (u32VoltageCount % 10) + 1 + 48;
+					}
+				}
+				else
+				{
+					u32VoltageCount /= 10;
+					au8VolageDisplay[2] = (u32VoltageCount % 10) + 48;
+				}
+				
+				u32VoltageCount /= 10;
+				au8VolageDisplay[0] = u32VoltageCount + 48;
+				
+				AT91C_BASE_PIOA->PIO_CODR = PIN_RE;      // RE to low
+				_74HC4053D_SWITCH_XY(CX);
+				LedOff(WHITE);
+				u16DispalyTime = 5000;
+				LCDMessage(LINE1_START_ADDR + 16, au8VolageDisplay);
+		 	}
+		}
+	}
+	
+	if(u16DispalyTime > 0)                               // Clear volage on lcd 5s later
+	{
+		u16DispalyTime--;
+		
+		if(u16DispalyTime == 0)
+		{
+			LCDClearChars(LINE1_START_ADDR + 16, 4);
+		}
+	}
+	
+	if(*pbVCheck)                                       // Start check if bool is ture
+	{
+		AT91C_BASE_PIOA->PIO_SODR = PIN_RE;      // RE to high
+		_74HC4053D_SWITCH_XY(CY);    // 4053C to CY (3.3V)
+		
+		if(u8Wait++ == 5)
+		{
+			u8Wait = 0;
+			
+			if(Adc12StartConversion(ADCUsed))
+			{
+				LedOn(WHITE);
+				u32VoltageCount = 0;
+				*pbVCheck = FALSE;
+				u8CallbackTimesCount = AdcCallbackTimes;
+			}
+		}
+	}
+} /* end VolageCheck */
 
 /**********************************************************************************************************************
 State Machine Function Definitions
@@ -245,322 +403,82 @@ static void UserApp1SM_Idle(void)
 	      2. When measure X9C103, turn white led on, or turn it off.
 	      3. If use MIC, blue led on. If use phone, green led on. If mute, purple led on. Only one led works at the same time.
 	      4. Show volume level and channel id on lcd.
-	
-	Contrast: | Control board | Controlled board |               Address              |
-	          |     +5V       |       5V         |                                    |
-	          |     GND       |       GND        |                                    |
-	          |     ICS       |       AD         | PA_16_BLADE_CS     (u32)0x00010000 |
-	          |     SCK       |       RE         | PA_15_BLADE_SCK    (u32)0x00008000 |
-	          |     MISO      |       CS         | PA_13_BLADE_MISO   (u32)0x00002000 |
-	          |     MOSI      |       UD         | PA_14_BLADE_MOSI   (u32)0x00004000 |
-	          |     TX        |       INC        | PA_12_BLADE_UPOMI  (u32)0x00001000 |
-	          |     RX        |       4053C      | PA_11_BLADE_UPIMO  (u32)0x00000800 |
-	          |     AN1       |       4053B      | PB_04_BLADE_AN1    (u32)0x00000010 |
-	          |     AN0       |       4053A      | PB_03_BLADE_AN0    (u32)0x00000008 |
 	*/
 	
 	static bool bPress = FALSE;       // Check button press
-	static bool bLevelChange = FALSE; // Check if volume level change
-	static u8 u8BlinkTime = 255;      // Red led blink time count
-	static u8 u8ModeId = 2;           // Used to change mode
-	static u8 u8VolumeLevel = 0;      // Volume level count
-	static u8 u8LevelOnLcd = 0;       // Show u8VolumeLevel on lcd
+	static bool bVCheck = FALSE;      // If start Volage check
 	static u8 u8ChangeInterval = 0;   // Interval time of changing volume continuously
 	
-	/* BUTTON0 */
-	/* Change once < Press > */
-	if(WasButtonPressed(BUTTON0))
+	/*---------------------      BUTTON0         ---------------------*/
+	if(WasButtonPressed(BUTTON0))    // Change once < Press >
 	{
 		ButtonAcknowledge(BUTTON0);
-		
 		u8ChangeInterval = 0;
 		bPress = TRUE;
-		
-		/* Enable wiper control */
-		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
-		AT91C_BASE_PIOA->PIO_SODR = PA_14_BLADE_MOSI;  // UD to high (Wiper up)
-		DelayU8(2);
-		
-		/* INC change from high to low (change wiper once) */
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-		DelayU8(2);
-		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
-		DelayU8(2);
-		
-		/* CS change from low to high (store wiper position)*/
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-		DelayU8(2);
-		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
-		
-		/* Volume level count */
-		if(u8VolumeLevel < 99)
-		{
-			if(u8VolumeLevel == 0) // Clear " MIN "
-			{
-				LCDClearChars(LINE2_START_ADDR + 17, 3);
-			}
-			
-			bLevelChange = TRUE;
-			u8VolumeLevel++;
-			
-			if(u8VolumeLevel == 99) // Display " MAX "
-			{
-				LCDMessage(LINE2_START_ADDR + 17, "MAX");
-			}
-		}
-		
-	}/* end Change once */
+		VolumeUp();
+	}
 	
-	/* Change continuously < Hold > */
-	if(IsButtonHeld(BUTTON0, 1500))
+	if(IsButtonHeld(BUTTON0, 1500))  // Change continuously < Hold >
 	{
 		if(u8ChangeInterval == 0)
 		{
-			/* Enable wiper control */
-			AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
-			AT91C_BASE_PIOA->PIO_SODR = PA_14_BLADE_MOSI;  // UD to high (Wiper up)
-			DelayU8(2);
-			
-			/* INC change from high to low (change wiper once) */
-			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-			DelayU8(2);
-			AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
-			DelayU8(2);
-			
-			/* CS change from low to high (store wiper position)*/
-			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-			DelayU8(2);
-			AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
-			
-			/* Volume level count */
-			if(u8VolumeLevel < 99)
-			{
-				if(u8VolumeLevel == 0) // Clear " MIN "
-				{
-					LCDClearChars(LINE2_START_ADDR + 17, 3);
-				}
-				
-				bLevelChange = TRUE;
-				u8VolumeLevel++;
-				
-				if(u8VolumeLevel == 99) // Display " MAX "
-				{
-					LCDMessage(LINE2_START_ADDR + 17, "MAX");
-				}
-			}
+			VolumeUp();
 		}
 		
 		if(++u8ChangeInterval == 150)
 		{
 			u8ChangeInterval = 0;
 		}
-	}/* end Change continuously */
-	/* end BUTTON0 */
+	}
+	/*--------------------     END BUTTON0         -------------------*/
 	
-	/* BUTTON1 */
-	/* Change once < Press > */
-	if(WasButtonPressed(BUTTON1))
+	/*---------------------      BUTTON1         ---------------------*/
+	if(WasButtonPressed(BUTTON1))    // Change once < Press >
 	{
 		ButtonAcknowledge(BUTTON1);
-		
 		u8ChangeInterval = 0;
 		bPress = TRUE;
-		
-		/* Enable wiper control */
-		AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
-		AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;  // UD to low (Wiper down)
-		DelayU8(2);
-		
-		/* INC change from high to low (change wiper once) */
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-		DelayU8(2);
-		AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
-		DelayU8(2);
-		
-		/* CS change from low to high (store wiper position)*/
-		AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-		DelayU8(2);
-		AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
-		
-		/* Volume level count */
-		if(u8VolumeLevel > 0)
-		{
-			if(u8VolumeLevel == 99) // Clear " MAX "
-			{
-				LCDClearChars(LINE2_START_ADDR + 17, 3);
-			}
-			
-			bLevelChange = TRUE;
-			u8VolumeLevel--;
-			
-			if(u8VolumeLevel == 0) // Display " MIN "
-			{
-				LCDMessage(LINE2_START_ADDR + 17, "MIN");
-			}
-		}
-		
-	}/* end Change once */
+		VolumeDown();
+	}
 	
-	/* Change continuously < Hold > */
-	if(IsButtonHeld(BUTTON1, 1500))
+	if(IsButtonHeld(BUTTON1, 1500))  // Change continuously < Hold >
 	{
 		if(u8ChangeInterval == 0)
 		{
-			/* Enable wiper control */
-			AT91C_BASE_PIOA->PIO_CODR = PA_13_BLADE_MISO;  // CS to low (Enable wiper change)
-			AT91C_BASE_PIOA->PIO_CODR = PA_14_BLADE_MOSI;  // UD to low (Wiper down)
-			DelayU8(2);
-			
-			/* INC change from high to low (change wiper once) */
-			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-			DelayU8(2);
-			AT91C_BASE_PIOA->PIO_CODR = PA_12_BLADE_UPOMI; // INC to low
-			DelayU8(2);
-			
-			/* CS change from low to high (store wiper position)*/
-			AT91C_BASE_PIOA->PIO_SODR = PA_12_BLADE_UPOMI; // INC to high
-			DelayU8(2);
-			AT91C_BASE_PIOA->PIO_SODR = PA_13_BLADE_MISO;  // CS to high
-			
-			/* Volume level count */
-			if(u8VolumeLevel > 0)
-			{
-				if(u8VolumeLevel == 99) // Clear " MAX "
-				{
-					LCDClearChars(LINE2_START_ADDR + 17, 3);
-				}
-				
-				bLevelChange = TRUE;
-				u8VolumeLevel--;
-				
-				if(u8VolumeLevel == 0) // Display " MIN "
-				{
-					LCDMessage(LINE2_START_ADDR + 17, "MIN");
-				}
-			}
+			VolumeDown();
 		}
 		
 		if(++u8ChangeInterval == 150)
 		{
 			u8ChangeInterval = 0;
 		}
-	}/* end Change continuously */
-	/* end BUTTON1 */
+	}
+	/*--------------------     END BUTTON1         -------------------*/
 	
-	/* BUTTON2 */
+	/*---------------------      BUTTON2         ---------------------*/
 	if(WasButtonPressed(BUTTON2))
 	{
 		ButtonAcknowledge(BUTTON2);
-		
 		bPress = TRUE;
-		
-		if((AT91C_BASE_PIOB->PIO_ODSR & PB_13_LED_WHT) == PB_13_LED_WHT) // Disable measure
-		{
-			LedOff(WHITE);
-			
-			AT91C_BASE_PIOA->PIO_CODR = PA_11_BLADE_UPIMO;    // 4053C to CX (A_OUT)
-		}
-		else // Enable measure
-		{
-			LedOn(WHITE);
-			
-			AT91C_BASE_PIOA->PIO_SODR = PA_11_BLADE_UPIMO;    // 4053C to CY (3.3V)
-		}
-		
-	}/* end BUTTON2 */
+		bVCheck = TRUE;
+	}
+	/*--------------------     END BUTTON2         -------------------*/
 	
-	/* BUTTON3 */
-	if(WasButtonPressed(BUTTON3))
+	/*---------------------      BUTTON3         ---------------------*/
+	if(WasButtonPressed(BUTTON3))   // Mode change (initial is MUTE)
 	{
 		ButtonAcknowledge(BUTTON3);
-		
 		bPress = TRUE;
-		
-		switch(u8ModeId)
-		{
-			case 0: // Change to phone signal mode
-			{
-				LCDMessage(LINE1_START_ADDR, "Channel: PHONE      ");
-				
-				u8ModeId = 1;
-				LedOff(BLUE);
-				LedOn(GREEN);
-				
-				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;      // 4053B to BX (Aout)
-				AT91C_BASE_PIOB->PIO_CODR = PB_03_BLADE_AN0;      // 4053A to AX (AUD2)
-				break;
-			}
-			
-			case 1: // Change to mute mode
-			{
-				LCDMessage(LINE1_START_ADDR, "Channel: MUTE       ");
-				
-				u8ModeId = 2;
-				LedOff(GREEN);
-				LedOn(PURPLE);
-				
-				AT91C_BASE_PIOB->PIO_SODR = PB_04_BLADE_AN1;      // 4053B to BY (GND)
-				break;
-			}
-			
-			case 2: // Change to MIC signal mode
-			{
-				LCDMessage(LINE1_START_ADDR, "Channel: MIC        ");
-				
-				u8ModeId = 0;
-				LedOff(PURPLE);
-				LedOn(BLUE);
-				
-				AT91C_BASE_PIOB->PIO_CODR = PB_04_BLADE_AN1;      // 4053B to BX (Aout)
-				AT91C_BASE_PIOB->PIO_SODR = PB_03_BLADE_AN0;      // 4053A to AY (AUD1)
-				break;
-			}
-			
-			default:
-			{
-				LedBlink(RED, LED_4HZ);
-				UserApp1_StateMachine = UserApp1SM_Error;
-				break;
-			}
-		}
-	}/* end BUTTON3 */
+		ModeChange();
+	}
+	/*--------------------     END BUTTON3         -------------------*/
 	
-	/*---------Led Red Blink for button-----------*/
-	if(bPress)
-	{
-		bPress = FALSE;
-		u8BlinkTime = 0;
-		
-		LedOn(RED);
-	}
-	
-	if(u8BlinkTime < 200)
-	{
-		u8BlinkTime++;
-	}
-	else if(u8BlinkTime == 200)
-	{
-		u8BlinkTime = 255;
-		
-		LedOff(RED);
-	}
-	/*------------end Led Red Blink---------------*/
-	
-	/*------------Lcd Volume Level----------------*/
-	if(bLevelChange)
-	{
-		bLevelChange = FALSE;
-		
-		u8LevelOnLcd = u8VolumeLevel / 10 + 48;
-		LCDMessage(LINE2_START_ADDR +11, &u8LevelOnLcd);
-		
-		u8LevelOnLcd = u8VolumeLevel % 10 + 48;
-		LCDMessage(LINE2_START_ADDR +12, &u8LevelOnLcd);
-	}
-	/*----------end lcd volume level--------------*/
+	/* Handle */
+	ButtonPressLedDisplay(&bPress);
+	VolageCheck(&bVCheck);
 	
 } /* end UserApp1SM_Idle() */
-    
+
 
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */

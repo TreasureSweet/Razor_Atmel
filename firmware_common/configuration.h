@@ -88,6 +88,8 @@ Includes
 /* Common application header files */
 #include "debug.h"
 #include "music.h"
+#include "X9C103S.h"
+#include "74HC4053D.h"
 #include "user_app1.h"
 #include "user_app2.h"
 #include "user_app3.h"

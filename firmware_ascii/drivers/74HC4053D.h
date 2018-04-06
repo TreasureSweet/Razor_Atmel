@@ -1,37 +1,33 @@
 /**********************************************************************************************************************
-File: user_app1.h                                                                
-
-----------------------------------------------------------------------------------------------------------------------
-To start a new task using this user_app1 as a template:
-1. Follow the instructions at the top of user_app1.c
-2. Use ctrl-h to find and replace all instances of "user_app1" with "yournewtaskname"
-3. Use ctrl-h to find and replace all instances of "UserApp1" with "YourNewTaskName"
-4. Use ctrl-h to find and replace all instances of "USER_APP1" with "YOUR_NEW_TASK_NAME"
-5. Add #include yournewtaskname.h" to configuration.h
-6. Add/update any special configurations required in configuration.h (e.g. peripheral assignment and setup values)
-7. Delete this text (between the dashed lines)
-----------------------------------------------------------------------------------------------------------------------
+File: 74HC4053D.h                                                                
 
 Description:
-Header file for user_app1.c
+Header file for 74HC4053D.c
 
 **********************************************************************************************************************/
 
-#ifndef __USER_APP1_H
-#define __USER_APP1_H
+#ifndef __74HC4053D_APP_H
+#define __74HC4053D_APP_H
 
 /**********************************************************************************************************************
 Type Definitions
 **********************************************************************************************************************/
-
+typedef enum {AX = 0, AY, BX, BY, CX, CY} C4053DSwitchType; // Conrtrolled by 4053A, 4053B, 4053C
 
 /**********************************************************************************************************************
 Constants / Definitions
 **********************************************************************************************************************/
-#define AdcCallbackTimes 50      // Conversion times
-#define ButtonPressLed RED       // Led blink for buttons
-#define ADCUsed ADC12_CH2        // ADC Channel
-#define PIN_RE PA_15_BLADE_SCK   // Pin " Relay "
+
+/*---------------------------------------------------------------------------------------------------------------------
+Contrast: | Control board | Controlled board |               Address              |
+		  |     RX        |       4053C      | PA_11_BLADE_UPIMO  (u32)0x00000800 |
+		  |     AN1       |       4053B      | PB_04_BLADE_AN1    (u32)0x00000010 |
+		  |     ICS       |       4053A      | PA_16_BLADE_CS     (u32)0x00010000 |
+*/
+#define _74HC4053D_A PA_16_BLADE_CS
+#define _74HC4053D_B PB_04_BLADE_AN1
+#define _74HC4053D_C PA_11_BLADE_UPIMO
+/*--------------------------------------------------------------------------------------------------------------------*/
 
 /**********************************************************************************************************************
 Function Declarations
@@ -40,34 +36,28 @@ Function Declarations
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
-void UserApp1_AdcCallback(u16 u16Result_);
+void _74HC4053D_SWITCH_XY(C4053DSwitchType);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
-void UserApp1Initialize(void);
-void UserApp1RunActiveState(void);
-
+void _74HC4053D_APP_INIT(void);
+void _74HC4053D_APP_RunActiveState(void);
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
 /*--------------------------------------------------------------------------------------------------------------------*/
-static void ButtonPressLedDisplay(bool *);
-static void VolumeUp(void);
-static void VolumeDown(void);
-static void ModeChange(void);
-static void VolageCheck(bool *);
+
 
 /***********************************************************************************************************************
 State Machine Declarations
 ***********************************************************************************************************************/
-static void UserApp1SM_Idle(void);
+static void _74HC4053D_SM_Idle(void);
 
-static void UserApp1SM_Error(void);
+static void _74HC4053D_SM_Error(void);
 
 
-#endif /* __USER_APP1_H */
-
+#endif /* __74HC4053D_APP_H */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* End of File                                                                                                        */

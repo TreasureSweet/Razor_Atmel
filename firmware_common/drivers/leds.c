@@ -154,6 +154,44 @@ static LedConfigType Leds_asLedArray[TOTAL_LEDS] =
 /* Public functions */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/*-------------------------------------------------------------------------------------------------------------------
+Function: LedOffAll
+
+Description:
+turn all leds off.
+*/
+void LedOffAll(void)
+{
+	LedOff(RED);
+	LedOff(ORANGE);
+	LedOff(YELLOW);
+	LedOff(GREEN);
+	LedOff(CYAN);
+	LedOff(BLUE);
+	LedOff(PURPLE);
+	LedOff(WHITE);
+} /* end LedOffAll() */
+
+
+/*-------------------------------------------------------------------------------------------------------------------
+Function: LedOnAll
+
+Description:
+turn all leds on.
+*/
+void LedOnAll(void)
+{
+	LedOn(RED);
+	LedOn(ORANGE);
+	LedOn(YELLOW);
+	LedOn(GREEN);
+	LedOn(CYAN);
+	LedOn(BLUE);
+	LedOn(PURPLE);
+	LedOn(WHITE);
+} /* end LedOnAll() */
+
+
 /*----------------------------------------------------------------------------------------------------------------------
 Function: LedOn
 

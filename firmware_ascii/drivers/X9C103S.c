@@ -1,8 +1,8 @@
 /**********************************************************************************************************************
-File: user_app2.c                                                                
+File: X9C103S.c                                                                
 
 Description:
-This is a user_app2.c file template 
+This is a X9C103S.c file template 
 
 ------------------------------------------------------------------------------------------------------------------------
 API:
@@ -11,11 +11,7 @@ Public functions:
 
 
 Protected System functions:
-void UserApp2Initialize(void)
-Runs required initialzation for the task.  Should only be called once in main init section.
 
-void UserApp2RunActiveState(void)
-Runs current task state.  Should only be called once in main loop.
 
 
 **********************************************************************************************************************/
@@ -27,24 +23,17 @@ Global variable definitions with scope across entire project.
 All Global variable names shall start with "G_UserApp2"
 ***********************************************************************************************************************/
 /* New variables */
-volatile u32 G_u32UserApp2Flags;                       /* Global state flags */
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
-extern volatile u32 G_u32SystemFlags;                  /* From main.c */
-extern volatile u32 G_u32ApplicationFlags;             /* From main.c */
-
-extern volatile u32 G_u32SystemTime1ms;                /* From board-specific source file */
-extern volatile u32 G_u32SystemTime1s;                 /* From board-specific source file */
 
 
 /***********************************************************************************************************************
 Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp2_" and be declared as static.
 ***********************************************************************************************************************/
-static fnCode_type UserApp2_StateMachine;            /* The state machine function pointer */
-//static u32 UserApp2_u32Timeout;                      /* Timeout counter used across states */
+static fnCode_type X9C103S_APP_StateMachine;            /* The state machine function pointer */
 
 
 /**********************************************************************************************************************
@@ -55,13 +44,93 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/*-------------------------------------------------------------------------------------------------------------------
+Function: DelayU8
+
+Description:
+Do <u8> times loop to simulate delay.
+
+Promises:
+Need an u8 input 0 ~ 255.
+*/
+void DelayU8(u8 u8Time)
+{
+	for(u8 i = u8Time; i; i--)
+	{
+	};
+} /* end DelayU8 */
+
+/*-------------------------------------------------------------------------------------------------------------------
+Function: X9C103S_RESISTANCE_UP
+
+Description:
+Add X9C103S resistance u8time times (wiper down)
+
+Promises:
+*/
+void X9C103S_RESISTANCE_UP(u8 u8time)
+{
+	for(u8 i = u8time; i; i--)
+	{
+		/* Enable wiper control */
+		AT91C_BASE_PIOA->PIO_CODR = X9C103S_CS;  // CS to low (Enable wiper change)
+		AT91C_BASE_PIOA->PIO_CODR = X9C103S_UD;  // UD to low (Wiper down)
+		DelayU8(2);
+
+		/* INC change from high to low (change wiper once) */
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_INC; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_CODR = X9C103S_INC; // INC to low
+		DelayU8(2);
+
+		/* CS change from low to high (store wiper position)*/
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_INC; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_CS;  // CS to high
+		DelayU8(2);
+	}
+	
+} /* end X9C103S_RESISTANCE_UP() */
+
+/*-------------------------------------------------------------------------------------------------------------------
+Function: X9C103S_RESISTANCE_UP
+
+Description:
+Reduce X9C103S resistance u8time times (wiper up)
+
+Promises:
+*/
+void X9C103S_RESISTANCE_DOWN(u8 u8time)
+{
+	for(u8 i = u8time; i; i--)
+	{
+		/* Enable wiper control */
+		AT91C_BASE_PIOA->PIO_CODR = X9C103S_CS;  // CS to low (Enable wiper change)
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_UD;  // UD to high (Wiper up)
+		DelayU8(2);
+
+		/* INC change from high to low (change wiper once) */
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_INC; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_CODR = X9C103S_INC; // INC to low
+		DelayU8(2);
+
+		/* CS change from low to high (store wiper position)*/
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_INC; // INC to high
+		DelayU8(2);
+		AT91C_BASE_PIOA->PIO_SODR = X9C103S_CS;  // CS to high
+		DelayU8(2);
+	}
+	
+} /* end X9C103S_RESISTANCE_DOWN() */
+
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /*--------------------------------------------------------------------------------------------------------------------
-Function: UserApp2Initialize
+Function: X9C103S_APP_INIT
 
 Description:
 Initializes the State Machine and its variables.
@@ -72,24 +141,31 @@ Requires:
 Promises:
   - 
 */
-void UserApp2Initialize(void)
+void X9C103S_APP_INIT(void)
 {
-  /* If good initialization, set state to Idle */
-  if( 1 )
-  {
-    UserApp2_StateMachine = UserApp2SM_Idle;
-  }
-  else
-  {
-    /* The task isn't properly initialized, so shut it down and don't run */
-    UserApp2_StateMachine = UserApp2SM_FailedInit;
-  }
+	/* PIOA enable */
+	AT91C_BASE_PIOA->PIO_PER |= 0x00007000;
+	AT91C_BASE_PIOA->PIO_OER |= 0x00007000;
 
-} /* end UserApp2Initialize() */
+	/* PIOA initialize */
+	AT91C_BASE_PIOA->PIO_SODR = 0x00002000;
+	AT91C_BASE_PIOA->PIO_CODR = 0x00005000;
+	
+	/* If good initialization, set state to Idle */
+	if( 1 )
+	{
+		X9C103S_APP_StateMachine = X9C103S_SM_Idle;
+	}
+	else
+	{
+		/* The task isn't properly initialized, so shut it down and don't run */
+		X9C103S_APP_StateMachine = X9C103S_SM_Error;
+	}
+} /* end X9C103S_APP_INIT() */
 
-  
+
 /*----------------------------------------------------------------------------------------------------------------------
-Function UserApp2RunActiveState()
+Function X9C103S_APP_RunActiveState()
 
 Description:
 Selects and runs one iteration of the current state in the state machine.
@@ -102,12 +178,10 @@ Requires:
 Promises:
   - Calls the function to pointed by the state machine function pointer
 */
-void UserApp2RunActiveState(void)
+void X9C103S_APP_RunActiveState(void)
 {
-  UserApp2_StateMachine();
-
-} /* end UserApp2RunActiveState */
-
+	X9C103S_APP_StateMachine();
+} /* end X9C103S_APP_RunActiveState() */
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Private functions                                                                                                  */
@@ -117,29 +191,19 @@ void UserApp2RunActiveState(void)
 /**********************************************************************************************************************
 State Machine Function Definitions
 **********************************************************************************************************************/
-
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Wait for ??? */
-static void UserApp2SM_Idle(void)
+static void X9C103S_SM_Idle(void)
 {
-} /* end UserApp2SM_Idle() */
-     
-#if 0
+} /* end X9C103S_SM_Idle() */
+
+
 /*-------------------------------------------------------------------------------------------------------------------*/
 /* Handle an error */
-static void UserApp2SM_Error(void)          
+static void X9C103S_SM_Error(void)          
 {
   
-} /* end UserApp2SM_Error() */
-#endif
-
-
-/*-------------------------------------------------------------------------------------------------------------------*/
-/* State to sit in if init failed */
-static void UserApp2SM_FailedInit(void)          
-{
-    
-} /* end UserApp2SM_FailedInit() */
+} /* end X9C103S_SM_Error() */
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/

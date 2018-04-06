@@ -71,10 +71,11 @@ void main(void)
 
   /* Application initialization */
 
+  X9C103S_APP_INIT();
+  _74HC4053D_APP_INIT();
   UserApp1Initialize();
   UserApp2Initialize();
   UserApp3Initialize();
-
   
   /* Exit initialization */
   SystemStatusReport();
@@ -101,6 +102,8 @@ void main(void)
     SdCardRunActiveState();
 
     /* Applications */
+	X9C103S_APP_RunActiveState();
+	_74HC4053D_APP_RunActiveState();
     UserApp1RunActiveState();
     UserApp2RunActiveState();
     UserApp3RunActiveState();

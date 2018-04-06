@@ -74,6 +74,8 @@ typedef struct
 /* Public Functions */
 void LedOn(LedNumberType eLED_);
 void LedOff(LedNumberType eLED_);
+void LedOffAll(void);
+void LedOnAll(void);
 void LedToggle(LedNumberType eLED_);
 void LedPWM(LedNumberType eLED_, LedRateType ePwmRate_);
 void LedBlink(LedNumberType eLED_, LedRateType ePwmRate_);
