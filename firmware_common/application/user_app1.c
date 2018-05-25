@@ -87,7 +87,7 @@ Promises:
 */
 void UserApp1Initialize(void)
 {
- 
+	AT91C_BASE_PIOB->PIO_PER |= 0x18;
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -136,6 +136,45 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp1SM_Idle(void)
 {
+	static bool bOn=FALSE;
+	static u32 u32Aport;
+	static u32 u32Bport;
+
+	/*text*/
+	static u32 u32Test;
+
+	if(AT91C_BASE_PIOB->PIO_ODSR != u32Test)
+	{
+		u32Test = AT91C_BASE_PIOB->PIO_ODSR;
+	}
+
+	u32Test = AT91C_BASE_PIOB->PIO_ODSR;
+	/*-----*/
+
+	if( (AT91C_BASE_PIOB->PIO_ODSR&(AT91C_PIO_PB3 | AT91C_PIO_PB4)) == 0 )
+	{
+		bOn=TRUE;
+	}
+
+	if(bOn)
+	{
+		if( (AT91C_BASE_PIOB->PIO_ODSR&(AT91C_PIO_PB3 | AT91C_PIO_PB4)) == 0x18 )
+		{
+			if( u32Aport == 0x08 )
+			{
+				LedOn(RED);
+				bOn=FALSE;
+			}
+			if( u32Bport == 0x10 )
+			{
+				LedOff(RED);
+				bOn=FALSE;
+			}
+		}
+		
+		u32Aport=AT91C_BASE_PIOB->PIO_ODSR&0x08;
+		u32Bport=AT91C_BASE_PIOB->PIO_ODSR&0x10;
+	}
 
 } /* end UserApp1SM_Idle() */
     

@@ -72,7 +72,7 @@ void main(void)
   /* Application initialization */
 
   UserApp1Initialize();
-  UserApp2Initialize();
+//  UserApp2Initialize();
   UserApp3Initialize();
 
   
@@ -102,7 +102,7 @@ void main(void)
 
     /* Applications */
     UserApp1RunActiveState();
-    UserApp2RunActiveState();
+//    UserApp2RunActiveState();
     UserApp3RunActiveState();
     
     /* System sleep*/

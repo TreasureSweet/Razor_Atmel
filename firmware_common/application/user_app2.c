@@ -74,6 +74,8 @@ Promises:
 */
 void UserApp2Initialize(void)
 {
+	AT91C_BASE_PIOB->PIO_PER |= 0x18;
+	AT91C_BASE_PIOB->PIO_OER |= 0x18;
   /* If good initialization, set state to Idle */
   if( 1 )
   {
@@ -122,7 +124,11 @@ State Machine Function Definitions
 /* Wait for ??? */
 static void UserApp2SM_Idle(void)
 {
-    
+	if(WasButtonPressed(BUTTON0))
+	{
+		ButtonAcknowledge(BUTTON0);
+		AT91C_BASE_PIOB->PIO_SODR = (AT91C_PIO_PB3 | AT91C_PIO_PB4);
+	}
 } /* end UserApp2SM_Idle() */
      
 #if 0
