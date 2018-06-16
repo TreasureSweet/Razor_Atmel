@@ -5,7 +5,6 @@ Global variable definitions with scope across entire project.
 ***********************************************************************************************************************/
 /* New variables */
 
-
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Existing variables (defined in other files -- should all contain the "extern" keyword) */
 
@@ -23,9 +22,60 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/* Send u8 data */
+void MBI_SEND_U8(u8 u8SendData)
+{
+	for(u8 i = 8; i; i--)
+	{
+		if(u8SendData % 2)
+		{
+			MBI_SDI_TO_H;
+		}
+		else
+		{
+			MBI_SDI_TO_L;
+		}
+		
+		u8SendData /= 2;
+		
+		for(u8 j = 10; j; j--);
+		
+		MBI_CLK_TO_H;
+		
+		for(u8 j = 10; j; j--);
+		
+		MBI_CLK_TO_L;
+	}
+	
+	MBI_LE_TO_H;
+	for(u8 j = 5; j; j--);
+	MBI_LE_TO_L;
+}
+
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
+
+/*Name: void MBI_PINS_INIT(void)
+Function: initialize all the pins used for MBI5026GF
+Notice: need do once to enable all the apis
+*/
+void MBI_PINS_INIT(void)
+{
+	AT91C_BASE_PIOA->PIO_PER |= MBI_PIOA_INIT;
+//	AT91C_BASE_PIOB->PIO_PER |= MBI_PIOB_INIT;
+	AT91C_BASE_PIOA->PIO_OER |= MBI_PIOA_INIT;
+//	AT91C_BASE_PIOB->PIO_OER |= MBI_PIOB_INIT;
+	
+	MBI_LE_TO_L;           //Latch enable
+	MBI_OE_TO_H;           //Output disable
+	
+	/* IO INIT */
+	MBI_CLK_TO_L;
+	MBI_SDI_TO_L;
+	/* End IO INIT*/
+	
+} /* end void MBI_PINS_INIT(void) */
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/

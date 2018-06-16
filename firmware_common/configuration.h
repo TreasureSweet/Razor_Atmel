@@ -92,6 +92,8 @@ Includes
 #include "user_app2.h"
 #include "user_app3.h"
 
+#include "CD4515BM.h"
+#include "MBI5026GF.h"
 
 /**********************************************************************************************************************
 !!!!! External peripheral assignments

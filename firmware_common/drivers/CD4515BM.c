@@ -23,9 +23,76 @@ Function Definitions
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
 
+/*Name: void CD45_OUTPUT_CHOOSE(u8 u8Index)
+Function: choose the output pins by change the four input pins A, B, C, D
+Notice: need to enable the CD45 choose pins by control inh and stb
+*/
+void CD45_OUTPUT_CHOOSE(u8 u8Index)
+{
+	if(u8Index & (u8)1)//A
+	{
+		CD45_A_TO_H;
+	}
+	else
+	{
+		CD45_A_TO_L;
+	}
+	
+	u8Index /= 2;
+	
+	if(u8Index & (u8)1)//B
+	{
+		CD45_B_TO_H;
+	}
+	else
+	{
+		CD45_B_TO_L;
+	}
+	
+	u8Index /= 2;
+	
+	if(u8Index & (u8)1)//C
+	{
+		CD45_C_TO_H;
+	}
+	else
+	{
+		CD45_C_TO_L;
+	}
+	
+	u8Index /= 2;
+	
+	if(u8Index & (u8)1)//D
+	{
+		CD45_D_TO_H;
+	}
+	else
+	{
+		CD45_D_TO_L;
+	}
+	
+} /* end void CD45_OUTPUT_CHOOSE(u8 u8Index) */
+
+
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
+
+/*Name: void CD45_PINS_INIT(void)
+Function: initialize all the pins used for CD45
+Notice: need do once to enable all the apis
+*/
+void CD45_PINS_INIT(void)
+{	
+	AT91C_BASE_PIOA->PIO_PER |= CD45_PIOA_INIT;
+//	AT91C_BASE_PIOB->PIO_PER |= CD45_PIOB_INIT;
+	AT91C_BASE_PIOA->PIO_OER |= CD45_PIOA_INIT;
+//	AT91C_BASE_PIOB->PIO_OER |= CD45_PIOB_INIT;
+	
+	CD45_STB_TO_L;            //Strobe low, disable
+	CD45_INH_TO_H;            //INH hign, disable
+	
+} /* end void CD45_PINS_INIT(void) */
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/

@@ -1,0 +1,15 @@
+"D:\5.App\IAR\arm\bin\armproc.dll" 
+
+"D:\5.App\IAR\arm\bin\armjlink2.dll" 
+
+"D:\8.Github\Razor_Atmel\firmware_ascii\iar_7_20_1\Debug\Exe\eie_ascii-01.out" 
+
+--plugin="D:\5.App\IAR\arm\bin\armbat.dll" 
+
+--device_macro="D:\5.App\IAR\arm\config\debugger\Microchip\SAM3U.dmac" 
+
+--flash_loader="D:\5.App\IAR\arm\config\flashloader\Microchip\sam3u2\sam3u2-flash.board" 
+
+
+
+

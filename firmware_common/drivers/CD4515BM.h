@@ -6,11 +6,28 @@ Type Definitions
 **********************************************************************************************************************/
 
 /*---The following define need to change for the right parameter---*/
-#define CD45_PIN_A   <pin connected>
-#define CD45_PIN_B   <pin connected>
-#define CD45_PIN_C   <pin connected>
-#define CD45_PIN_STB <pin connected>
-#define CD45_PIN_INH  <pin connected>
+#define CD45_PIN_A    AT91C_PIO_PA3
+#define CD45_PIN_B    AT91C_PIO_PA7
+#define CD45_PIN_C    AT91C_PIO_PA6
+#define CD45_PIN_D    AT91C_PIO_PA4
+#define CD45_PIN_STB  AT91C_PIO_PA5
+#define CD45_PIN_INH  AT91C_PIO_PA8
+
+#define CD45_A_TO_H   (AT91C_BASE_PIOA -> PIO_SODR = CD45_PIN_A)
+#define CD45_A_TO_L   (AT91C_BASE_PIOA -> PIO_CODR = CD45_PIN_A)
+#define CD45_B_TO_H   (AT91C_BASE_PIOA -> PIO_SODR = CD45_PIN_B)
+#define CD45_B_TO_L   (AT91C_BASE_PIOA -> PIO_CODR = CD45_PIN_B)
+#define CD45_C_TO_H   (AT91C_BASE_PIOA -> PIO_SODR = CD45_PIN_C)
+#define CD45_C_TO_L   (AT91C_BASE_PIOA -> PIO_CODR = CD45_PIN_C)
+#define CD45_D_TO_H   (AT91C_BASE_PIOA -> PIO_SODR = CD45_PIN_D)
+#define CD45_D_TO_L   (AT91C_BASE_PIOA -> PIO_CODR = CD45_PIN_D)
+#define CD45_STB_TO_H (AT91C_BASE_PIOA -> PIO_SODR = CD45_PIN_STB)
+#define CD45_STB_TO_L (AT91C_BASE_PIOA -> PIO_CODR = CD45_PIN_STB)
+#define CD45_INH_TO_H (AT91C_BASE_PIOA -> PIO_SODR = CD45_PIN_INH)
+#define CD45_INH_TO_L (AT91C_BASE_PIOA -> PIO_CODR = CD45_PIN_INH)
+
+#define CD45_PIOA_INIT (CD45_PIN_A | CD45_PIN_B | CD45_PIN_C | CD45_PIN_D | CD45_PIN_STB | CD45_PIN_INH)
+//#define CD45_PIOB_INIT (<All pins for PIOB |>)
 
 /*-----------------------------------------------------------------*/
 
@@ -26,11 +43,13 @@ Function Declarations
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Public functions                                                                                                   */
 /*--------------------------------------------------------------------------------------------------------------------*/
+void CD45_OUTPUT_CHOOSE(u8);
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/
 /* Protected functions                                                                                                */
 /*--------------------------------------------------------------------------------------------------------------------*/
+void CD45_PINS_INIT(void);
 
 
 /*--------------------------------------------------------------------------------------------------------------------*/

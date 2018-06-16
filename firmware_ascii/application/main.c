@@ -39,7 +39,7 @@ contraints but must complete execution regardless of success or failure of start
 the 1ms period.
 ***********************************************************************************************************************/
 
-void main(void)
+ void main(void)
 {
   G_u32SystemFlags |= _SYSTEM_INITIALIZING;
 
@@ -70,11 +70,12 @@ void main(void)
   SdCardInitialize();
 
   /* Application initialization */
-
+  CD45_PINS_INIT();
+  MBI_PINS_INIT();
+  
   UserApp1Initialize();
   UserApp2Initialize();
   UserApp3Initialize();
-
   
   /* Exit initialization */
   SystemStatusReport();
